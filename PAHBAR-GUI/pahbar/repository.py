@@ -15,6 +15,7 @@ from persiantools.jdatetime import JalaliDate
 from pahbar.dataSet import DataSet
 import jdatetime
 import logging
+import calendar
 
 class Repository:
 
@@ -149,17 +150,20 @@ class Repository:
             calendarData = CalendarData (newDate.date ())
             yesterdayCalendarData = CalendarData (newDate.date () - timedelta (days=2))
             lastWeekCalendarData = CalendarData (newDate.date () - timedelta (days=7))
+            tomorrowCalendarData = CalendarData (newDate.date () + timedelta (days= 1))
 
             try:
                 calendarData.get_CalendarData ()
                 yesterdayCalendarData.get_CalendarData ()
                 lastWeekCalendarData.get_CalendarData ()
+                tomorrowCalendarData.get_CalendarData ()
                 for i in range (24):
                     newRows [i].append (calendarData.eideMazhabi)
                     newRows [i].append (calendarData.aza)
                     newRows [i].append (calendarData.holiday)
                     newRows [i].append (yesterdayCalendarData.holiday)
                     newRows [i].append (lastWeekCalendarData.holiday)
+                    newRows [i].append (tomorrowCalendarData.holiday)
 
             except Exception as inst:
                 print (inst)
@@ -170,15 +174,18 @@ class Repository:
             for i in range (24):
                 newRows [i].append (i + 1)
                 newRows [i].append (calendarData.dayName)
+                newRows [i].append (calendarData.dayOfYear)
                 newRows [i].append (daylength (calendarData.date.timetuple().tm_yday, 36.2605))
                 newRows [i].append (daylength (yesterdayCalendarData.date.timetuple().tm_yday, 36.2605))
                 newRows [i].append (daylength (lastWeekCalendarData.date.timetuple().tm_yday, 36.2605))
 
             historicalLoad.get_HistoricalLoadData (newDate.date ())
+            for hour in range (24):
+                historicalLoad.get_PreviousHourLoad (newDate.date (), hour + 1)
             
             for i in range (24):
-                newRows [i].append (weatherData.allWeatherData [f'{calendarData.date.year}-{calendarData.date.month}'].values [calendarData.date.day - 1][0])
-                newRows [i].append (weatherData.allWeatherData [f'{calendarData.date.year}-{calendarData.date.month}'].values [calendarData.date.day - 1][1])
+                newRows [i].append (weatherData.allWeatherData [f'{calendar.month_name [calendarData.date.month]}-{calendarData.date.year}'][f'{calendarData.date.day}'][0][0])
+                newRows [i].append (weatherData.allWeatherData [f'{calendar.month_name [calendarData.date.month]}-{calendarData.date.year}'][f'{calendarData.date.day}'][0][1])
             
             if historicalLoad.yesterdayLoad:
                 for i in range (24):
@@ -197,6 +204,7 @@ class Repository:
 
             for hour in range (24):
                 newRows [hour].append (historicalLoad.yesterdayLoad [hour])
+                newRows [hour].append (historicalLoad.previousHourLoad [hour])
 
             if historicalLoad.load:
                 for hour in range (24):

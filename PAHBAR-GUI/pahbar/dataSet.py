@@ -82,7 +82,7 @@ class DataSet:
     def convert_DatatoDict (self, from_date, to_date):
         data = []
         headers = self.headers [:-1] + self.hoursHeaders
-        removeIndexList = [6, 8, 8, 10, 10, 10, 10]
+        removeIndexList = [4, 4, 4, 4, 7, 7, 10, 10, 10, 10]
         day = 0
         for k in range (len (removeIndexList)):
             headers.pop (removeIndexList [k])

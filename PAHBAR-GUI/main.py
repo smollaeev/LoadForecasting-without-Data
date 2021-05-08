@@ -2,6 +2,7 @@ import tkinter as tk
 from components import MainWindow
 from eventhandler import EventHandler
 import subprocess
+import matplotlib
 
 event_handler = EventHandler ('./data')
 root = tk.Tk ()
@@ -34,7 +35,5 @@ if get_uuid() in alowable_uuid:
     main_window = MainWindow(root, event_handler)
 else:
     tk.Message(root, text= 'The licence is not valid').grid(column=0, row=0, padx=20, pady=20)
-
-
 
 root.mainloop()

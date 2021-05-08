@@ -5,10 +5,10 @@ import os
 
 path = 'C:\\Users\\User\\Documents\\Work\\SIRCo\\loadForecasting\\theNewSoftware\\Power-consumption-forecasting-software\\data'
 
-# dataSet = pd.read_excel (os.path.join (path, 'DataSet_Hourly.xlsx'), index_col= 0, engine='openpyxl')
-# fileToWrite = os.path.join (path, 'DataSet.pickle') 
-# with open(fileToWrite, 'wb') as file:
-#     pickle.dump (dataSet, file)
+dataSet = pd.read_excel (os.path.join (path, 'DataSet_Hourly.xlsx'), index_col= 0, engine='openpyxl')
+fileToWrite = os.path.join (path, 'DataSet.pickle') 
+with open(fileToWrite, 'wb') as file:
+    pickle.dump (dataSet, file)
 
 dataSet = pd.read_excel (os.path.join (path, 'DataSet_ExcludingDG_Hourly.xlsx'), index_col= 0, engine='openpyxl')
 fileToWrite = os.path.join (path, 'DataSet_ExcludingDG.pickle') 

@@ -1,3 +1,5 @@
+from datetime import date
+import datetime
 import matplotlib.pyplot as plt
 import openpyxl
 from openpyxl.utils import get_column_letter
@@ -11,14 +13,18 @@ from clusteringTrainAndTest import Clusterer
 import copy
 import sklearn.cluster as cluster
 from sklearn.preprocessing import StandardScaler
+import seaborn as sns
 
 class Predictor:
-    def __init__ (self, X_train, y_train, regressors, classifier = None, clusterer = None):
+    def __init__ (self, X_train, y_train, regressors, dataSetType, classifier = None, clusterer = None):
         self.X_train = X_train
         self.y_train = y_train 
         self.classifier = classifier
         self.clusterer = clusterer
         self.regressors = regressors
+        self.dataSetType = dataSetType
+        self.testSet = pd.read_excel (f'./Results/{datetime.date.today ()}/TestSet_{self.dataSetType}_{datetime.date.today ()}.xlsx', engine='openpyxl')
+        self.variables = self.testSet.columns [1:-3]        
 
     def predict (self, R):
         X_test = R.X_test
@@ -46,5 +52,19 @@ class Predictor:
             for i in range (len (X_test.data)): 
                 y_pred [i] = (self.regressors.predict (X_test.data [i].reshape (1,-1)))
 
-        error = (sum([abs((y-x)/y) for x, y in zip(y_pred, y_test)])/len(y_test))*100
-        print (np.average (error))
+        errors = [abs((y-x)/y)*100 for x, y in zip(y_pred, y_test)]
+        self.testSet ['Prediction'] = y_pred
+        self.testSet ['error'] = errors
+        self.testSet.to_excel (f'./Results/{datetime.date.today ()}/TestSet_{self.dataSetType}_{datetime.date.today ()}.xlsx')
+        sns.displot (x = errors)
+        plt.show ()
+        # error = (sum([abs((y-x)/y) for x, y in zip(y_pred, y_test)])/len(y_test))*100
+        averageError = np.average (errors)
+        standardDevOfError = np.std (errors)
+        varianceOfError = np.var (errors)
+        print (f'Average = {averageError}')
+        print (f'StdDev = {standardDevOfError}')
+        print (f'Variance= {varianceOfError}')
+        f = open (f'./Results/{datetime.date.today()}/Results&Description-{self.dataSetType}-{datetime.date.today()}.txt', "w+")
+        f.write (f'Description:\n {self.dataSetType} \n Variables = {self.variables} \n Average = {averageError} \n StdDev = {standardDevOfError} \n Variance= {varianceOfError}')
+        f.close ()

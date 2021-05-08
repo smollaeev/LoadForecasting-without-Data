@@ -127,6 +127,7 @@ class Prediction():
             print (inst)           
             logging.error (inst)
             return False 
+        self.train ()
 
         logging.info (f'DataSet {self.R.selectedDataSet} has been updated successfully!')
         return True                  
@@ -224,7 +225,7 @@ class Prediction():
             logging.error (inst)
             return False
 
-    def train(self, queue)->bool:
+    def train(self, queue = None)->bool:
         '''
         trians the model synchronously in another thread
 
@@ -243,8 +244,11 @@ class Prediction():
             self.R.prepare_Data ()
             trainer = Trainer (self.R)
             # trainer.train ()
-            t = ThreadedTask(trainer.train, queue)
-            t.start()
+            if queue:
+                t = ThreadedTask(trainer.train, queue)
+                t.start()
+            else:
+                trainer.train ()
             logging.info ('Model trained successfully!')
         except Exception as inst:
             print (inst)

@@ -34,3 +34,6 @@ class PredictDay:
     def add_HistoricalLoadData (self, R):
         self.historicalLoad = HistoricalLoad (R)
         self.historicalLoad.get_HistoricalLoadData (self.date, predictDay=True)
+
+    def add_PreviousLoad (self, hour):
+        self.historicalLoad.get_PreviousHourLoad (self.date, hour, predictDay=True)

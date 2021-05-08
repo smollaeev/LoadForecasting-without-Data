@@ -17,9 +17,9 @@ class Trainer:
 
     def train (self):
         if self.R.selectedDataSet == '.pickle':
-            self.regressors = GradientBoostingRegressor (learning_rate= 0.13696764945647918, max_depth = 7, min_samples_leaf = 6, min_samples_split = 8, n_estimators = 500)
+            self.regressors = GradientBoostingRegressor (learning_rate = 0.08761951839869596, max_depth = 7, min_samples_leaf = 12, min_samples_split = 5, n_estimators = 500)
         else:
-            self.regressors = GradientBoostingRegressor (learning_rate = 0.14822684074082734, max_depth = 7, min_samples_leaf = 6, min_samples_split = 6, n_estimators = 500)
+            self.regressors = GradientBoostingRegressor (learning_rate = 0.14644075566188816, max_depth = 8, min_samples_leaf = 3, min_samples_split = 3, n_estimators = 600)
 
         self.regressors.fit (self.R.X_train.data, self.R.y_train)
 

@@ -8,22 +8,17 @@ class IndependentVariables ():
         self.data = data
 
     def encode_OneHot_FitTransform (self):
-        self.ct_WeekDays = ColumnTransformer ([('one_hot_encoder', OneHotEncoder(), [6])], remainder='passthrough')
+        self.ct_WeekDays = ColumnTransformer ([('one_hot_encoder', OneHotEncoder(), [7])], remainder='passthrough')
         self.data = np.array (self.ct_WeekDays.fit_transform (self.data), dtype= 'float64')
-        self.data = self.data [:, 1:]
-        self.ct_Hours = ColumnTransformer ([('one_hot_encoder', OneHotEncoder(), [11])], remainder='passthrough')
-        self.data = np.array (self.ct_Hours.fit_transform (self.data), dtype= 'float64')
         self.data = self.data [:, 1:]
 
     def encode_OneHot_Transform (self, X_train):
         self.data = np.array (X_train.ct_WeekDays.transform (self.data), dtype= 'float64')
         self.data = self.data [:, 1:]
-        self.data = np.array (X_train.ct_Hours.transform (self.data), dtype= 'float64')
-        self.data = self.data [:, 1:]
-        
+
     def fit_FeatureScaler (self):
         self.sc_X = StandardScaler()
-        self.sc_X.fit (self.data [:, 34:])
+        self.sc_X.fit (self.data [:, 6:])
 
     def scale_Features (self, X_train):        
-        self.data [:, 34:] = X_train.sc_X.transform(self.data [:, 34:])
+        self.data [:, 6:]= X_train.sc_X.transform(self.data [:, 6:])

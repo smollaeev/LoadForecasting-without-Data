@@ -12,7 +12,7 @@ path = 'C:\\Users\\User\\Documents\\Work\\SIRCo\\loadForecasting\\theNewSoftware
 fileToRead = os.path.join (path, 'DataSet.pickle') 
 with open(fileToRead, 'rb') as file:
     outputHistory = pickle.load (file)
-outputHistory.to_excel (os.path.join (path, 'DataSet.xlsx'))
+outputHistory.to_excel (os.path.join (path, 'DataSet_temp.xlsx'))
 
 # path = 'C:\\Users\\User\\Documents\\Work\\SIRCo\\Load Forecasting\\The New Software\\Pahbar-GUI\\data'
 # fileToRead = os.path.join (path, 'DataSet_ExcludingDG.pickle') 
