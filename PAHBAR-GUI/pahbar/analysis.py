@@ -2,13 +2,9 @@ from copy import copy
 import pandas as pd
 import matplotlib
 matplotlib.use('TkAgg')
-import numpy as np
 from matplotlib.figure import Figure
 from persiantools.jdatetime import JalaliDate
-from datetime import timedelta
-import logging
 import copy
-
 
 class Analysis:
 
@@ -21,11 +17,7 @@ class Analysis:
         for i in range (24):
             self.headers.append (f'H{i + 1}')
 
-    def analyze (self):
-        self.calculate_Error ()
-        self.make_AnalysisResults ()
-
-    def calculate_Error (self):
+    def __calculate_Error__ (self):
         for i in range (len (self.actualData)):
             error = []
             absoluteError = []
@@ -38,7 +30,7 @@ class Analysis:
             self.error.append (error)
             self.absoluteError.append (absoluteError)
 
-    def make_AnalysisResults (self):
+    def __make_AnalysisResults__ (self):
         data = []
         for i in range (len (self.actualData)):
             data.append (self.actualData [i])
@@ -51,12 +43,9 @@ class Analysis:
                     data [i][j] = round (data [i][j], 3)
 
         self.resultsDictionary = dict ({'header':self.headers, 'data': data})
+        self.exportableOutput = pd.DataFrame (data = self.resultsDictionary['data'], columns= self.resultsDictionary ['header'])
 
-    def export_AsXLSX (self, path):
-        exportedOutput = pd.DataFrame (data = self.resultsDictionary['data'], columns= self.resultsDictionary ['header'])
-        exportedOutput.to_excel (path)
-
-    def extract_DataForPlot (self, from_date):
+    def __extract_DataForPlot__ (self, from_date):
         self.dataForPlot = []
         shamsiFromDate = JalaliDate (from_date)
 
@@ -66,9 +55,13 @@ class Analysis:
                 self.dataForPlot.append (self.predictedData [i][2:])
                 self.dataForPlot.append (self.error [i][2:])
                 self.dataForPlot.append (self.absoluteError [i][2:])
-    
-    def plot_AnalysisResults (self, from_date, to_date):
-        self.extract_DataForPlot (from_date)
+
+    def analyze (self):
+        self.__calculate_Error__ ()
+        self.__make_AnalysisResults__ ()
+
+    def plot_AnalysisResults (self, from_date):
+        self.__extract_DataForPlot__ (from_date)
         if not (self.dataForPlot):
             result = dict ({'English':'There is no result available!', 'Farsi':'نتایج آنالیز در دسترس نیست'})
             return result
@@ -102,16 +95,7 @@ class Analysis:
         plotsList [1].legend ()
 
         return self.fig
-
-    def save_Plot (self, path):
-        try:
-            self.fig.savefig (path)
-            return True
-        except Exception as inst:
-            print (inst)
-            logging.warning (inst)
-            return False
-
+        
     def calculate_ErrorAttributes (self):
         mean = sum (self.dataForPlot [3])/24
         maximum = max (self.dataForPlot [3])

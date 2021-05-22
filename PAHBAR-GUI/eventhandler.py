@@ -1,15 +1,13 @@
 from enum import Enum
-from pahbar.logic import Prediction
+from pahbar.logic import Logic
+
 class Event(Enum):
-    # Data Pane
     IMPORT_DATA_BUTTON = 'GET_DATA_BUTTON'
     EXPORT_DATA_BUTTON = 'EXPORT_DATA_BUTTON'
     FETCH_ONLINE_DATA = 'FETCH_ONLINE_DATA'
     EDIT_DATA = 'EDIT_DATA'
-
     DISPLAY_DATA_BUTTON = 'DISPLAY_DATA_BUTTON'
     DATA_DISPLAY_RADIO_BUTTON = 'DATA_DISPLAY_RADIO_BUTTON'
-    # Prediction Pane
     DISPLAY_PREDICTION_BUTTON = 'DISPLAY_PREDICTION_BUTTON'
     EXPORT_Prediction_BUTTON = 'EXPORT_Prediction_BUTTON'
     TRAIN_BUTTON = 'TRAIN_BUTTON'
@@ -27,20 +25,21 @@ class Event(Enum):
 
 class EventHandler():
     def __init__(self, data_folder_path):
-        self.prediction = Prediction(data_folder_path)
+        self.prediction = Logic(data_folder_path)
+
     def handle(self, event, **kwargs):
         if event == Event.IMPORT_DATA_BUTTON :
-            return self.prediction.import_data(**kwargs)
+            return self.prediction.import_Data(**kwargs)
         elif event == Event.EXPORT_DATA_BUTTON :
-            return self.prediction.export_data(**kwargs)
+            return self.prediction.export_Data(**kwargs)
         elif event == Event.FETCH_ONLINE_DATA :
-            return self.prediction.fetch_online_data()
+            return self.prediction.fetch_OnlineData()
         elif event == Event.DISPLAY_DATA_BUTTON :
-            return self.prediction.get_data(**kwargs)
+            return self.prediction.get_Data(**kwargs)
         elif event == Event.DISPLAY_PREDICTION_BUTTON :
-            return self.prediction.get_prediction(**kwargs)
+            return self.prediction.get_Prediction(**kwargs)
         elif event == Event.EXPORT_Prediction_BUTTON :
-            return self.prediction.export_prediction(**kwargs)
+            return self.prediction.export_Prediction(**kwargs)
         elif event == Event.TRAIN_BUTTON :
             return self.prediction.train(**kwargs)
         elif event == Event.DATA_DISPLAY_RADIO_BUTTON:
@@ -78,10 +77,4 @@ class EventHandler():
     
     def determine_PredictDates (self, from_date, to_date):
         self.prediction.determine_PredictDates (from_date, to_date)
-        return self.prediction.predictDay.predictDates
-        
-    
-
-
-
-    
+        return self.prediction.predictDay.predictDates    

@@ -18,7 +18,13 @@ class IndependentVariables ():
 
     def fit_FeatureScaler (self):
         self.sc_X = StandardScaler()
-        self.sc_X.fit (self.data [:, 6:])
+        self.sc_X.fit (self.data [:, 13:])
 
     def scale_Features (self, X_train):        
-        self.data [:, 6:]= X_train.sc_X.transform(self.data [:, 6:])
+        self.data [:, 13:]= X_train.sc_X.transform(self.data [:, 13:])
+
+    def prepare_Data (X_train):
+        X_train.encode_OneHot_FitTransform ()
+        X_train.fit_FeatureScaler ()
+        X_train.scale_Features (X_train)
+        return X_train

@@ -18,7 +18,7 @@ root.rowconfigure(1, weight=1)
 def get_uuid():
     return subprocess.check_output('wmic csproduct get uuid').decode().split('\n')[1].strip()
 
-alowable_uuid = [
+allowedUUID = [
     'FDB26BB8-165E-11E3-834F-B6197F192822',
     '8EA4F82D-CB6D-9644-94E8-5E2674485912',
     '03A75C00-8BD9-11E2-9AC6-6C3BE523EB33',
@@ -31,7 +31,7 @@ alowable_uuid = [
     '031B021C-040D-05E1-B206-CE0700080009',
     '19CD3500-E8CF-11E3-ABC8-A0D3C125E328'
 ]
-if get_uuid() in alowable_uuid:
+if get_uuid() in allowedUUID:
     main_window = MainWindow(root, event_handler)
 else:
     tk.Message(root, text= 'The licence is not valid').grid(column=0, row=0, padx=20, pady=20)

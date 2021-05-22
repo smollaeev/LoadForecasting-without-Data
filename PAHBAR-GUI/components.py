@@ -1,22 +1,14 @@
-from datetime import date
 import tkinter as tk
-from tkinter import font
 import tkinter.messagebox
 import tkinter.filedialog
 from tkinter import ttk
 import os
 from pathlib import Path
-import subprocess
 import copy
-from typing import ChainMap
-
-
 import jdatetime
 from persiantools.jdatetime import JalaliDate
-
 from eventhandler import Event
 import queue
-
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class PlotCanvas (ttk.LabelFrame):
@@ -603,9 +595,9 @@ class PredictionDisplayControl(ttk.Labelframe):
         self.columnconfigure(1, weight=1)
         self.rowconfigure(1, weight=1)
 
-        from_date_picker = DatePicker(self,'From Date', preDefinedDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day + 2])
+        from_date_picker = DatePicker(self,'From Date', preDefinedDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day + 3])
         self.from_date_picker = from_date_picker
-        to_date_picker = DatePicker(self, 'To Date', preDefinedDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day + 2])
+        to_date_picker = DatePicker(self, 'To Date', preDefinedDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day + 3])
         self.to_date_picker = to_date_picker
 
         predictLogo = tk.PhotoImage (file='images/predict.png')
@@ -1078,13 +1070,13 @@ class MainNoteBook(ttk.Notebook):
         self.data_note.grid(sticky='ewns')
         self.add(self.data_note, text='Data')
 
-        self.shortTermPredictionNote = PredictionNote(self, root, self.event_handler, trainEndDate)
-        self.shortTermPredictionNote.grid(sticky=(tk.E,tk.W,tk.N,tk.S))
-        self.add(self.shortTermPredictionNote, text='Short-Term Prediction')
+        self.predictionNote = PredictionNote(self, root, self.event_handler, trainEndDate)
+        self.predictionNote.grid(sticky=(tk.E,tk.W,tk.N,tk.S))
+        self.add(self.predictionNote, text='Prediction')
 
-        self.longTermPredictionNote = PredictionNote(self, root, self.event_handler, trainEndDate)
-        self.longTermPredictionNote.grid(sticky=(tk.E,tk.W,tk.N,tk.S))
-        self.add(self.longTermPredictionNote, text='Long-Term Prediction')
+        # self.longTermPredictionNote = PredictionNote(self, root, self.event_handler, trainEndDate)
+        # self.longTermPredictionNote.grid(sticky=(tk.E,tk.W,tk.N,tk.S))
+        # self.add(self.longTermPredictionNote, text='Long-Term Prediction')
 
         self.analysisNote = AnalysisNote (self, root, self.event_handler, trainEndDate)
         self.analysisNote.grid (sticky=(tk.E,tk.W,tk.N,tk.S))
@@ -1092,8 +1084,8 @@ class MainNoteBook(ttk.Notebook):
 
     def change_Language (self, language):
         self.data_note.change_Language (language)
-        self.shortTermPredictionNote.change_Language (language)
-        self.longTermPredictionNote.change_Language (language)
+        self.predictionNote.change_Language (language)
+        # self.longTermPredictionNote.change_Language (language)
         self.analysisNote.change_Language (language)
 
 class MainWindow():
