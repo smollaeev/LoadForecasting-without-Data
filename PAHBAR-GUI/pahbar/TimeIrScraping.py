@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pahbar.calendarData import CalendarData
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -63,6 +64,14 @@ def __get_Day__ (driver, date_):
         ghamariList [i] = int (unidecode (ghamariList [i]))
     return shamsiList, ghamariList
 
+def __is_LastDayOfSafar__ (days):
+    try:
+        if days [0].hijriMonth == 2 and days [3].hijriMonth == 3:
+            return True
+    except:
+        pass
+    return False
+
 def getYear(year):
     driver = webdriver.Firefox()
     driver.get("http://www.time.ir/fa/eventyear")
@@ -122,7 +131,7 @@ def getYear(year):
                 result.append ([miladiDay, jalaliDay, qamariDay])
     return result
 
-def getDays(inputDates):
+def __get_DataFromTimeIR__ (inputDates):
     options = webdriver.ChromeOptions ()
     options.headless = True
     driver = webdriver.Chrome (options = options)
@@ -141,4 +150,10 @@ def getDays(inputDates):
         currentDay = CalendarData (date_, shamsiDateList = shamsiAndGhamari [0], ghamariDateList = shamsiAndGhamari [1])
         outputList.append(currentDay)
     driver.quit ()
+    return outputList
+
+def getDays(inputDates):
+    outputList = __get_DataFromTimeIR__ (inputDates)
+    if __is_LastDayOfSafar__ (outputList):
+        outputList [0].lastDayOfSafar = True
     return outputList

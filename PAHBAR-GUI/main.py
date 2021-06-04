@@ -2,7 +2,6 @@ import tkinter as tk
 from components import MainWindow
 from eventhandler import EventHandler
 import subprocess
-import matplotlib
 
 event_handler = EventHandler ('./data')
 root = tk.Tk ()

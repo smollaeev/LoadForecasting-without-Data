@@ -10,6 +10,7 @@ from persiantools.jdatetime import JalaliDate
 from eventhandler import Event
 import queue
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from datetime import timedelta
 
 class PlotCanvas (ttk.LabelFrame):
     def __init__ (self, parent):
@@ -508,16 +509,16 @@ class DataDisplayControl(ttk.Labelframe):
         self.displayLogo = displayLogo
         self.displayButton = ttk.Button(self, text='Display Data', command=self.fun_wrapper, image = self.displayLogo, compound = 'left', style = 'my.TButton')
 
-        deleteLogo = tk.PhotoImage (file = 'images/deleteLogo.png')
-        self.deleteLogo = deleteLogo
-        self.deleteButton = ttk.Button (self, text = 'Delete Data', command = self.delete_Row, image = self.deleteLogo, compound = 'left', style = 'my.TButton')
+        # deleteLogo = tk.PhotoImage (file = 'images/deleteLogo.png')
+        # self.deleteLogo = deleteLogo
+        # self.deleteButton = ttk.Button (self, text = 'Delete Data', command = self.delete_Row, image = self.deleteLogo, compound = 'left', style = 'my.TButton')
         
         from_date_picker.grid(column=0,row=0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
         to_date_picker.grid(column=1,row=0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
         # radioButton1.grid (column=0,row=1, padx=10, pady=10, sticky='w')
         # radioButton2.grid (column=0,row=2, padx=10, pady=10, sticky='w')
         self.displayButton.grid(column=0,row=1, padx=10, pady=10, sticky='w')
-        self.deleteButton.grid (column = 1, row = 1, padx = 10, pady = 10, sticky = 'w')
+        # self.deleteButton.grid (column = 1, row = 1, padx = 10, pady = 10, sticky = 'w')
 
     def change_Language (self, language):
         self.language = language
@@ -531,14 +532,14 @@ class DataDisplayControl(ttk.Labelframe):
         self.from_date_picker.change_ToEnglish ()
         self.to_date_picker.change_ToEnglish ()
         self.displayButton.config (text='Display Data', style = 'my.TButton')
-        self.deleteButton.config (text = 'Delete Data', style= 'my.TButton')
+        # self.deleteButton.config (text = 'Delete Data', style= 'my.TButton')
 
     def change_ToFarsi (self):
         self.config (text= 'نمایش داده‌ها')
         self.from_date_picker.change_ToFarsi ()
         self.to_date_picker.change_ToFarsi ()
         self.displayButton.config (text= 'نمایش داده‌ها', style = 'farsi.TButton')
-        self.deleteButton.config (text = 'حذف و جایگزینی با مقادیر پیش‌بینی شده', style= 'farsi.TButton')
+        # self.deleteButton.config (text = 'حذف و جایگزینی با مقادیر پیش‌بینی شده', style= 'farsi.TButton')
 
     def get_period(self):
         return {
@@ -594,10 +595,13 @@ class PredictionDisplayControl(ttk.Labelframe):
         self.rowconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
         self.rowconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
+        self.rowconfigure(2, weight=1)
 
-        from_date_picker = DatePicker(self,'From Date', preDefinedDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day + 3])
+        newDate = trainEndDate + timedelta (days = 3)
+        from_date_picker = DatePicker(self,'From Date', preDefinedDate=[newDate.year, newDate.month, newDate.day])
         self.from_date_picker = from_date_picker
-        to_date_picker = DatePicker(self, 'To Date', preDefinedDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day + 3])
+        to_date_picker = DatePicker(self, 'To Date', preDefinedDate=[newDate.year, newDate.month, newDate.day])
         self.to_date_picker = to_date_picker
 
         predictLogo = tk.PhotoImage (file='images/predict.png')
@@ -608,10 +612,15 @@ class PredictionDisplayControl(ttk.Labelframe):
         self.exportLogo = exportLogo
         self.export_button = ttk.Button(self, text='Export Results', command=self.export_fun, image = self.exportLogo, compound = 'left', style = 'my.TButton')
         
+        predictAndUpdateLogo = tk.PhotoImage (file='images/predict.png')
+        self.predictAndUpdateLogo = predictAndUpdateLogo
+        self.display_predictAndUpdatButton = ttk.Button(self, text='Predict and Update DataSet', command=self.predict_AndUpdate, image = self.predictAndUpdateLogo, compound = 'left', style = 'my.TButton')
+
         from_date_picker.grid(column=0,row=0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
         to_date_picker.grid(column=1,row=0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
         self.display_button.grid(column=0,row=1, padx=10, pady=10, sticky='W')
         self.export_button.grid(column=1,row=1, padx=10, pady=10, sticky='W')
+        self.display_predictAndUpdatButton.grid (column=2,row=1, padx=10, pady=10, sticky='W')
 
     def change_Language (self, language):
         self.language = language
@@ -626,6 +635,7 @@ class PredictionDisplayControl(ttk.Labelframe):
         self.to_date_picker.change_ToEnglish ()
         self.display_button.config (text='Predict', style= 'my.TButton')
         self.export_button.config (text= 'Export Results', style= 'my.TButton')
+        self.display_predictAndUpdatButton.config (text= 'Predict and Update DataSet', style= 'my.TButton')
 
     def change_ToFarsi (self):
         self.config (text = 'نمایش نتایج پیش‌بینی')
@@ -633,13 +643,14 @@ class PredictionDisplayControl(ttk.Labelframe):
         self.to_date_picker.change_ToFarsi ()
         self.display_button.config (text = 'پیش‌بینی', style= 'farsi.TButton')
         self.export_button.config (text= 'ذخیره نتایج', style= 'farsi.TButton')
+        self.display_predictAndUpdatButton.config (text= 'پیش‌بینی و به‌روزرسانی دیتاست', style= 'farsi.TButton')
 
     def get_period(self):
         return {
             'from_date': self.from_date_picker.get_date(),
             'to_date': self.to_date_picker.get_date()
         }
-    def fun_wrapper(self):
+    def fun_wrapper(self, replace = False):
         predictDates = self.event_handler.determine_PredictDates (**self.get_period())
         if self.language == 1:
             response = tkinter.messagebox.askyesno (title="Predict Dates", message=f"Load will be predicted for the following dates ... If it is correct click yes, unless click No and complete your dataset!\nFrom {JalaliDate (predictDates [0])} to {JalaliDate (predictDates [-1])}\nIs it correct?")
@@ -647,7 +658,9 @@ class PredictionDisplayControl(ttk.Labelframe):
             rightAligned = f"با توجه به آخرین تاریخ موجود در دیتاست، تاریخ‌های زیر پیش‌بینی خواهد شد ...\nاز تاریخ {JalaliDate(predictDates[0])} تا تاریخ {JalaliDate (predictDates [-1])}\nدر صورت صحت بازه انتخاب شده، بر روی گزینه Yes کلیک کنید!"
             response = tkinter.messagebox.askyesno (title="تاریخ‌های پیش‌بینی", message= "{rightAligned:>}".format (rightAligned = rightAligned))
         if response:
-            data_dict = self.event_handler.handle(Event.DISPLAY_PREDICTION_BUTTON,**self.get_period())
+            inputVariables = self.get_period()
+            inputVariables ['replace'] = replace
+            data_dict = self.event_handler.handle(Event.DISPLAY_PREDICTION_BUTTON, **inputVariables)
             if data_dict:
                 if data_dict == 1:
                     if self.language == 1:
@@ -672,7 +685,9 @@ class PredictionDisplayControl(ttk.Labelframe):
                     tkinter.messagebox.showerror('Unsuccessful', 'Somethiong went wrong!')
                 if self.language == 2:
                     tkinter.messagebox.showerror('ناموفق', 'متاسفانه مشکلی پیش آمده است ... با پشتیبانی نرم‌افزار تماس بگیرید')
-                
+    
+    def predict_AndUpdate (self):
+        self.fun_wrapper (replace=True)
 
     def export_fun(self):
         files = [

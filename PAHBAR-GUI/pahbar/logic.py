@@ -1,5 +1,6 @@
+from pahbar.dates import Dates
 from pahbar.independentVariables import IndependentVariables
-from pahbar.features import Features
+from pahbar.featuresData import FeaturesData
 import threading
 from pahbar.repository import Repository
 from pahbar.trainer import Trainer
@@ -56,9 +57,10 @@ class Logic ():
             bool: if export is successul returns True otherwise returns False
         '''
         try:
-            dataSet = self.R.unpickle_Data ('DataSet')
+            featuresData = self.R.unpickle_Data ('FeaturesData')
+            loadData = self.R.unpickle_Data ('LoadData').iloc [:, :-1]
+            dataSet = featuresData.join (loadData)
             Repository.export_AsXLSX (dataSet, file_path)
-            # self.R.export_DataSet_AsXLSX(file_path)
             logging.info (f'DataSet {self.R.selectedDataSet} has been exported -- {file_path}')
             return True
         except Exception as inst:
@@ -80,12 +82,12 @@ class Logic ():
                 'data': list of list of data all in str type
         '''
         logging.info (f'Attempted to see the data from dataset {self.R.selectedDataSet} ({from_date} - {to_date}) ...')
-        self.R.dataSet.convert_DatatoDict (from_date, to_date)
-        if not (self.R.dataSet.dataDictionary ['data']):
+        dataDictionary = self.R.dataSet.get_DataDictionaryToDisplay (from_date, to_date)
+        if not (dataDictionary ['data']):
             logging.warning (f'The range is not available in the dataset {self.R.selectedDataSet}')
         else:
             logging.info ('Data displayed successfully!')
-        return self.R.dataSet.dataDictionary
+        return dataDictionary
 
     def fetch_OnlineData (self)->bool:
         '''
@@ -113,6 +115,12 @@ class Logic ():
                 result = dict ({'English':'Please make sure your load data is complete and try again! There may be blank cells in your load data! Please fill in the blank cells or delete the row with Nan values!', 'Farsi': 'لطفاً از کامل بودن اطلاعات بار اطمینان حاصل کنید و مجدداً تلاش نمایید! اگر در داده‌ها خانه‌های خالی وجود دارد، سطر مربوطه را حذف نمایید'})
                 return result
 
+            zeroTemp = loadData.eq(0).any().any()
+            if zeroTemp:
+                logging.warning ('Please make sure your load data values are non-zero and try again!')
+                result = dict ({'English':'Please make sure your load data is correct and try again! There may be values of zero in your load data!', 'Farsi': 'لطفاً از صحیح بودن اطلاعات بار اطمینان حاصل کنید و مجدداً تلاش نمایید! اگر در داده‌ها مقادیر صفر وجود دارد، مقادیر درست را وارد نمایید'})
+                return result
+
             historicalLoad = HistoricalLoad (self.R.dataSet, loadData = loadData)
             if historicalLoad.endDate == date.today () - timedelta (days=1):
                 stopDate = historicalLoad.endDate - timedelta (days=1)
@@ -120,35 +128,24 @@ class Logic ():
                 self.R.pickle_Data (yesterdayLoadData, 'YesterdayLoad')
             else:
                 stopDate = historicalLoad.endDate
-            # if isinstance (self.R.dataSet.update (loadData, historicalLoad, stopDate), bool):
             yesterdayLoadData = self.R.unpickle_Data ('YesterdayLoad')
             if not (self.R.dataSet.update (yesterdayLoadData, historicalLoad, stopDate)):
-                if self.R.dataSet.newDaysFeatures.weatherDataUnavailable:
+                if self.R.dataSet.featuresData.weatherDataUnavailable:
                     logging.warning ('Weather data unavailable!')
                     result = dict ({'English':'No internet connection!', 'Farsi': 'لطفاً اتصال به اینترنت را بررسی کنید!'})
                     return result
-                if self.R.dataSet.newDaysFeatures.calendarDataUnavailable:
+                if self.R.dataSet.featuresData.calendarDataUnavailable:
                     logging.warning ('Calendar data unavailable!')
                     result = dict ({'English':'No internet connection!', 'Farsi': 'لطفاً اتصال به اینترنت را بررسی کنید!'})
                     return result
-            # if not (self.R.dataSet.update (loadData, historicalLoad, stopDate)):
-            # # if not (self.R.complete_DataSet (self.pathToLoadData)): 
-            #     if self.R.dataSet.weatherDataUnavailable:
-            #         logging.warning ('Weather data unavailable!')
-            #         result = dict ({'English':'No internet connection!', 'Farsi': 'لطفاً اتصال به اینترنت را بررسی کنید!'})
-            #         return result
-
-                # if self.R.dataSet.calendarDataUnavailable:
-                #     logging.warning ('Calendar data unavailable!')
-                #     result = dict ({'English':'No internet connection!', 'Farsi': 'لطفاً اتصال به اینترنت را بررسی کنید!'})
-                #     return result
                          
         except Exception as inst: 
             print (inst)           
             logging.error (inst)
             return False 
         
-        self.R.pickle_Data (self.R.dataSet.data, 'DataSet')
+        self.R.pickle_Data (self.R.dataSet.featuresData.data, 'FeaturesData')
+        self.R.pickle_Data (self.R.dataSet.loadData.data, 'LoadData')
         self.train ()
 
         logging.info (f'DataSet {self.R.selectedDataSet} has been updated successfully!')
@@ -172,7 +169,7 @@ class Logic ():
             self.invalidDate = 1
             return self.invalidDate
 
-    def get_Prediction (self, from_date, to_date)->dict:
+    def get_Prediction (self, from_date, to_date, replace = False)->dict:
         '''
         predicts for the requested period(including begining and end) and returns the results 
 
@@ -187,9 +184,7 @@ class Logic ():
         '''   
         try:
             self.R.processed_X_train = self.R.unpickle_Data ('Preprocessed_X_Train_')
-            # self.R.get_ProcessedData ()  
             self.R.regressors = self.R.unpickle_Data ('Regressors_')
-            # self.R.get_TrainedAlgorithms ()
             logging.info ('Trained Algorithms data has fetched successfully ... ')
             predictor = Predictor (self.R.processed_X_train, self.R.regressors)
         except Exception as inst:
@@ -201,15 +196,14 @@ class Logic ():
 
         self.output = Output (self.predictDay.predictDates, self.R.dataSet.headers)
         logging.info ('Trying to complete features of the predict days ...')
-        outputFeatures = Features ()
+        outputFeatures = FeaturesData (self.R.dataSet.featuresData.data)
         d = self.output.predictDates [0]
         dates = []
         while d != self.output.predictDates [-1] + timedelta (days=1):
             if d != date.today () - timedelta (days = 1):
                 dates.append (d)
             d += timedelta (days=1)
-        features = outputFeatures.get_Features (dates, self.output.featuresHeaders)
-        # success = self.output.complete_Features ()
+        features = outputFeatures.get_Features (dates)
         if isinstance (features, bool):
             if not (features):
                 if outputFeatures.weatherDataUnavailable:
@@ -223,12 +217,13 @@ class Logic ():
                     
         try:
             logging.info ('Trying to predict load ...')
-            predictor.predict (self.output.predictDates, self.R, features, self.output)
+            predictor.predict (self.output.predictDates, self.R, features, self.output, replace = replace)
         except Exception as inst:
             print (inst)
             logging.warning (inst)
             return None
-
+        if replace:
+            self.train ()
         self.output.convert_DatatoDict (from_date, to_date)
         logging.info ('Load predicted successfully!')
         return self.output.dataDictionary
@@ -278,9 +273,7 @@ class Logic ():
             X_train, y_train = self.R.get_TrainSet ()
             X_train = IndependentVariables.prepare_Data (X_train)
             self.R.pickle_Data (X_train, 'Preprocessed_X_Train_')
-            # self.R.prepare_Data ()
             trainer = Trainer (self.R, X_train, y_train)
-            # trainer.train ()
             if queue:
                 t = ThreadedTask (trainer.train, queue)
                 t.start()
@@ -302,18 +295,15 @@ class Logic ():
                 return "No load Data! \"Import CORRECT Load Data\" first!"
             loadData = pd.read_excel (self.pathToLoadData, engine='openpyxl')
         newLoadData = HistoricalLoad (self.R.dataSet, loadData = loadData)
-        # self.completedDataSet = copy.deepcopy (self.R.dataSet)
         try:
-            result = self.R.dataSet.edit_Data (newLoadData.loadData)
-            # result = self.R.edit_DataSet (newLoadData.loadData)
+            result = self.R.dataSet.edit_LoadData (newLoadData.loadData)
             
             if isinstance (result, dict):
                 logging.warning (result ['English'])
                 return result
             else:
-                self.R.pickle_Data (self.R.dataSet.data, 'DataSet')
-                # self.R.dataSet = copy.deepcopy (self.completedDataSet)
-                # Repository.pickle_Data (self.R.dataSet, self.completedDataSet.dataSetPath)
+                self.R.pickle_Data (self.R.dataSet.featuresData.data, 'FeaturesData')
+                self.R.pickle_Data (self.R.dataSet.loadData.data, 'LoadData')
                 self.train ()
                 logging.info (f'DataSet{self.R.selectedDataSet} edited successfully!')
                 return True             
@@ -329,7 +319,7 @@ class Logic ():
 
     def delete_Row (self, from_date, to_date):
         logging.info (f'Attempted to delete {from_date} - {to_date} data from dataSet{self.R.selectedDataSet} ...')
-        if (to_date < self.R.dataSet.data.iloc [0]['Date'].date ()) or (from_date > self.R.dataSet.data.loc [self.R.dataSet.numberOfRecords - 1]['Date'].date ()):
+        if (to_date < self.R.dataSet.loadData.data.iloc [0]['Date'].date ()) or (from_date > self.R.dataSet.loadData.data.loc [self.R.dataSet.numberOfRecords - 1]['Date'].date ()):
             logging.warning ('Invalid Date!')
             result = dict ({'English':'The range you selected is not available in the dataset!', 'Farsi':'بازه انتخاب شده در دیتاست موجود نیست'})
             return result
@@ -374,20 +364,30 @@ class Logic ():
             result = dict ({'English':msg, 'Farsi':'بازه نامعتبر! بار بازه انتخاب شده، هنوز پیش‌بینی نشده است'})
             return result
 
+        # datesStr = []
         dates = []
         for i in range (len (self.R.predictedDataHistory)):
             dates.append (self.R.predictedDataHistory [i][1])
+            # dates.append (Dates.get_DateList (datesStr [i]))
+            # dates [i] = JalaliDate (int (dates [i][0]), int (dates [i][1]), int (dates [i][2]))
 
         logging.info (f'Trying to get the actual values from dataSet{self.R.selectedDataSet}')
-        self.R.dataSet.get_DataByDate (dates)
+        for i in range (len (dates)):
+            dates [i] = dates [i].to_gregorian ()
+        data = self.R.dataSet.get_DataByDate (dates)
+        actualValues = []
+        for i in range (len (data)):
+            actualValues.append ([JalaliDate (data[i][0])] + data [i][-26:-2])
+        for i in range (len (actualValues)):
+            actualValues [i].insert (0, 'Actual')
 
-        if not (self.R.dataSet.actualValues):
+        if not (actualValues):
             msg = 'No actual data! Please update the dataset!'
             logging.warning (msg)
             result = dict ({'English':msg, 'Farsi':'مقادیر واقعی بازه مورد نظر در دسترس نیست! لطفاً دیتاست را کامل نمایید'})
             return result
 
-        self.predictionAnalysis = Analysis (self.R.dataSet.actualValues, self.R.predictedDataHistory)
+        self.predictionAnalysis = Analysis (actualValues, self.R.predictedDataHistory)
         logging.info ('Analyzing predictions started ...')
         self.predictionAnalysis.analyze ()
         if self.predictionAnalysis.resultsDictionary:
@@ -464,7 +464,6 @@ class Logic ():
         logging.info ('Trying to get the last train date ...')
         try:
             self.R.lastTrainDate = self.R.unpickle_Data ('TrainDate_')
-            # self.R.get_LastTrainDate ()
             logging.info (f'last train date fetched successfully! ({self.R.lastTrainDate})')
             return self.R.lastTrainDate
         except Exception as inst:

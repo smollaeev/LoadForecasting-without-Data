@@ -1,6 +1,7 @@
 from datetime import timedelta
 import pandas as pd
 from persiantools.jdatetime import JalaliDate
+from pahbar.dates import Dates
 
 class HistoricalLoad ():
     def __init__ (self, dataSet, loadData = None):
@@ -11,75 +12,71 @@ class HistoricalLoad ():
 
     def __convert_toGregorianDate__ (self):
         for i in range (len (self.loadData.index)):
-            if '/' in str (self.loadData.iloc [i, self.loadData.columns.get_loc('تاریخ')]):
-                dateList = str (self.loadData.iloc [i, self.loadData.columns.get_loc('تاریخ')]).split ('/')
-            else:
-                dateList = str (self.loadData.iloc [i, self.loadData.columns.get_loc('تاریخ')]).split ('-')
+            dateList = Dates.get_DateList (str (self.loadData.iloc [i, self.loadData.columns.get_loc('تاریخ')]))
             gregorianDate = JalaliDate (int (dateList [0]), int (dateList [1]), int (dateList [2])).to_gregorian()
             self.loadData.iloc [i, self.loadData.columns.get_loc('تاریخ')] = gregorianDate
         self.endDate = gregorianDate
 
-    def get_HistoricalLoadData (self, date, yesterdayLoad, predictDay = False):
+    def __find_InDataSet__ (self, date1, date2, dataSet, row):
+        load = []
+        if (date1 == date2):
+            load = dataSet.loc [row, 'Load1':'Load24'].to_list ()
+        return load   
+
+    def __get_HistoricalLoadFromDataSet__ (self, date_, numberOfPreviousDays):
+        dataSet = self.dataSet.loadData.data
+        numberOfRecords = self.dataSet.loadData.numberOfRecords
+        for i in range (numberOfRecords):
+            row = numberOfRecords - 1 - i
+            try:
+                temp1 = dataSet.iloc [row]['Date'].to_pydatetime ().date ()
+            except:
+                try:
+                    temp1 = dataSet.iloc [row]['Date']
+                except:
+                    break
+            temp2 = date_ - timedelta (days = numberOfPreviousDays)
+            historicalLoad = self.__find_InDataSet__ (temp1, temp2, dataSet, row)
+            if historicalLoad:
+                break
+        return historicalLoad
+    
+    @staticmethod
+    def __get_HistoricalLoadFromSavedLoad__ (savedLoad, date_, numberOfPreviousDays):
+        try:
+            if (savedLoad [0] == date_ - timedelta (days = numberOfPreviousDays)):
+                HistoricalLoad = list (savedLoad [1:])
+                return HistoricalLoad
+        except:
+            pass
+
+    def __get_YesterdayLoad__ (self, date_, yesterdayLoad):
         self.yesterdayLoad = []
-
-        dataSet = self.dataSet.data
-        numberOfRecords = self.dataSet.numberOfRecords
-
-        for i in range (numberOfRecords):
-            try:
-                temp1 = dataSet.iloc [numberOfRecords - 1 - i]['Date'].to_pydatetime ().date ()
-            except:
-                try:
-                    temp1 = dataSet.iloc [numberOfRecords - i - 1]['Date']
-                except:
-                    break
-            temp2 = date - timedelta (days = 2)
-            if (temp1 == temp2):
-                self.yesterdayLoad = dataSet.iloc [numberOfRecords - 1 - i, -26:-2].to_list ()
-                break
+        self.yesterdayLoad = self.__get_HistoricalLoadFromDataSet__ (date_, 2)
         if not (self.yesterdayLoad):
-            try:
-                temp = yesterdayLoad [0]
-                if (temp == date - timedelta (days = 2)):
-                    self.yesterdayLoad = list (yesterdayLoad [1:])
-            except:
-                pass
-
+            self.yesterdayLoad = HistoricalLoad.__get_HistoricalLoadFromSavedLoad__ (yesterdayLoad, date_, 2)
         if not (self.yesterdayLoad):
-            print (f'You do not have {JalaliDate(date - timedelta (days = 2))} load data! Please complete your Load Data File!')
+            print (f'You do not have {JalaliDate(date_ - timedelta (days = 2))} load data! Please complete your Load Data File!')
 
+    def __get_LastWeekLoad__ (self, date_, yesterdayLoad):
         self.lastWeekLoad = []
-        for i in range (numberOfRecords):
-            try:
-                temp3 = dataSet.iloc [numberOfRecords - 1 - i]['Date'].to_pydatetime ().date ()
-            except:
-                try:
-                    temp3 = dataSet.iloc [numberOfRecords - 1 - i]['Date']
-                except:
-                    break
+        self.lastWeekLoad = self.__get_HistoricalLoadFromDataSet__ (date_, 7)
+        if not (self.lastWeekLoad):
+            self.lastWeekLoad = HistoricalLoad.__get_HistoricalLoadFromSavedLoad__ (yesterdayLoad, date_, 7)        
+        if not (self.lastWeekLoad):
+            print (f'You do not have {JalaliDate(date_ - timedelta (days = 7))} load data! Please complete your Load Data File!')
 
-            temp4 = date - timedelta (days = 7)
-            if (temp3 == temp4):
-                self.lastWeekLoad = dataSet.iloc [numberOfRecords - 1 - i, -26:-2].to_list ()
+    def __get_Load__ (self, date_):
+        self.load = []
+        for row in range (len (self.loadData.index)):
+            if (self.loadData.iloc [row]['تاریخ'] == date_):
+                self.load = self.loadData.iloc [row]['H1':'H24'].values.tolist ()
                 break
+        if not (self.load):
+            print (f'You do not have {JalaliDate (date_)} load data! Please complete your Load Data File!')
 
-        if not (self.lastWeekLoad):
-            try:
-                temp = yesterdayLoad [0]
-                if (temp == date - timedelta (days = 7)):
-                    self.lastWeekLoad = list (yesterdayLoad [1:])
-            except:
-                pass
-        
-        if not (self.lastWeekLoad):
-            print (f'You do not have {JalaliDate(date - timedelta (days = 7))} load data! Please complete your Load Data File!')
-                
+    def get_HistoricalLoadData (self, date_, yesterdayLoad, predictDay = False):
+        self.__get_YesterdayLoad__ (date_, yesterdayLoad)
+        self.__get_LastWeekLoad__ (date_, yesterdayLoad)     
         if not (predictDay):
-            self.load = []
-            for row in range (len (self.loadData.index)):
-                if (self.loadData.iloc [row]['تاریخ'] == date):
-                    self.load = self.loadData.iloc [row]['H1':'H24'].values.tolist ()
-                    break
-
-            if not (self.load):
-                print (f'You do not have {JalaliDate (date)} load data! Please complete your Load Data File!')
+            self.__get_Load__ (date_)   

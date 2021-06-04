@@ -16,7 +16,7 @@ class Repository:
         self.outputHeaders = ['نوع داده', 'تاریخ']
         for i in range (1, 25):
             self.outputHeaders.append (f'H{i}')
-        self.dataSet = DataSet (self.unpickle_Data ('DataSet'))
+        self.dataSet = DataSet (self.unpickle_Data ('FeaturesData'), self.unpickle_Data ('LoadData'))
         self.outputHistory = self.unpickle_Data ('Output')
         try:
             self.yesterdayLoadData = self.unpickle_Data ('YesterdayLoad')
@@ -24,9 +24,10 @@ class Repository:
             pass
 
     def get_TrainSet (self):
-        X = self.dataSet.data.iloc [:, 1:-26].values
+        X = self.dataSet.featuresData.data.iloc [:, 1:].join (self.dataSet.loadData.data.iloc [:, :-27])
+        X = X.values
         X_train = IndependentVariables (X)
-        y_train = self.dataSet.data.iloc [:, -26:-2].values 
+        y_train = self.dataSet.loadData.data.iloc [:, -27:-3].values
         return X_train, y_train
 
     def export_PredictionAsXLSX (self, fromDate, toDate, path):
@@ -84,7 +85,7 @@ class Repository:
     def select_DataSet (self, mode):
         if self.selectedDataSet != mode:
             self.selectedDataSet = mode
-            self.dataSet = DataSet (self.unpickle_Data ('DataSet'))
+            self.dataSet = DataSet (self.unpickle_Data ('FeaturesData'), self.unpickle_Data ('LoadData'))
             self.outputHistory = self.unpickle_Data ('Output') 
  
     def export_AllPredictionHistory (self, file_path):

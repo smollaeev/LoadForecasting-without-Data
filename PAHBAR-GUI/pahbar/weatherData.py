@@ -5,7 +5,7 @@ import calendar
 import collections
 
 class WeatherData:
-    def __init__ (self, endDate, startingDate):
+    def __init__ (self, startingDate, endDate):
         self.startingDate = startingDate
         self.endDate = endDate
         if self.startingDate:
