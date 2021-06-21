@@ -1,4 +1,6 @@
 from datetime import timedelta, date
+from copy import deepcopy
+from numpy.lib.function_base import copy
 from pahbar.loadData import LoadData
 from pahbar.featuresData import FeaturesData
 from pahbar.dates import Dates
@@ -20,9 +22,13 @@ class DataSet:
         self.numberOfRecords = self.featuresData.numberOfRecords
         self.determine_EndDate ()
 
-    def __get_HeadersForDisplay__ (self):
-        headers = self.headers [:5] + self.headers [8:11] + self.headers [13:15] + self.hoursHeaders
-        return headers
+    def __get_HeadersForDisplay__(self):
+        result = ['Date', 'Eide Mazhabi', 'Aza', 'Holiday', 'DayName', 'MaximumTemperature', 'AverageTemperature']
+        for hour in range (1, 25):
+            result.append (f'Load{hour}')
+        result.append ('MaxLoad')
+        result.append ('PeakHour')
+        return (result)
 
     def __remove_InvalidDates__ (self, dates):
         if dates [-1].to_gregorian () > self.endDate:
@@ -30,18 +36,17 @@ class DataSet:
                 dates.pop ()
         return dates
     
-    def __prepare_DataToDisplay__ (data):
-        result = []
-        for i in range (len (data)):
-            result.append (data [i][:5] + data [i][8:11] + data [i][13:15] + data [i][-26:-2])
-        return result
+    def __prepare_DataToDisplay__(data):
+        return [
+            data[i][:5] + data[i][8:11] + data[i][13:15] + data[i][-26:-2]
+            for i in range(len(data))
+        ]
 
-    def __get_DataForDisplay__ (self, fromDate, toDate):
+    def __get_DataForDisplay__(self, fromDate, toDate, headers):
         dates = Dates.make_ListOfDates (fromDate, toDate, jalali = True)
-        dates = self.__remove_InvalidDates__ (dates)        
-        data = self.get_DataByDate (dates)
-        data = DataSet.__prepare_DataToDisplay__ (data)
-        return data
+        dates = self.__remove_InvalidDates__ (dates)
+        # data = DataSet.__prepare_DataToDisplay__ (data)
+        return self.get_DataByDate (dates, headers)
 
     def __is_InvalidEditDate__ (self, data):
         for row in range (len (data.index)):
@@ -59,27 +64,40 @@ class DataSet:
             startDate += timedelta (days=1)
         return dates
 
+    def __get_ValidHeadersForDisplay__(self, requestedHeaders, allHeaders):
+        validHeaders = deepcopy (requestedHeaders)
+        invalidNames = [header for header in validHeaders if header not in allHeaders]
+        for invalidName in invalidNames:
+            validHeaders.remove (invalidName)
+        return validHeaders
+
     def determine_EndDate (self):
         self.endDate = self.featuresData.endDate
 
-    def get_DataDictionaryToDisplay (self, fromDate, toDate):
+    def get_DataDictionaryToDisplay(self, fromDate, toDate):
         data = []
-        headers = self.__get_HeadersForDisplay__ ()  
-        data = self.__get_DataForDisplay__ (fromDate, toDate)        
-        dataDictionary = dict ({'header':headers, 'data': data})
-        return dataDictionary
+        headers = self.__get_HeadersForDisplay__ ()
+        data = self.__get_DataForDisplay__ (fromDate, toDate, headers)
+        return dict ({'header':headers, 'data': data})
 
-    def edit_LoadData (self, newLoadData):
+    def edit_LoadData(self, newLoadData):
         if self.__is_InvalidEditDate__ (newLoadData):
-            result = dict ({'English':'Invalid dates in your data!', 'Farsi':'در اطلاعات وارد شده، تاریخ‌های غیرقابل قبول وجود دارد!'})
-            return result
+            return dict(
+                {
+                    'English': 'Invalid dates in your data!',
+                    'Farsi': 'در اطلاعات وارد شده، تاریخ‌های غیرقابل قبول وجود دارد!',
+                }
+            )
+
         self.loadData.replace_Data (newLoadData)
         return True
     
-    def get_DataByDate (self, dates):
+    def get_DataByDate (self, dates, headers):
         data = []
-        featuresData = self.featuresData.get_DataByDate (dates)
-        loadData = self.loadData.get_DataByDate (dates)
+        featuresHeaders = self.__get_ValidHeadersForDisplay__ (headers, self.featuresData.headers)
+        loadHeaders = self.__get_ValidHeadersForDisplay__ (headers, self.loadData.headers)
+        featuresData = self.featuresData.get_DataByDate (dates, featuresHeaders)
+        loadData = self.loadData.get_DataByDate (dates, loadHeaders)
         for i in range (len (dates)):
             try:
                 data.append (featuresData [i] + loadData [i])

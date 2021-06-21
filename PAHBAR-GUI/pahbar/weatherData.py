@@ -27,18 +27,14 @@ class WeatherData:
         except:
             return False
 
-    def __get_MonthYearList__ (self):
+    def __get_MonthYearList__(self):
         self.monthYearList = []
         j = 0
         for i in range (len (self.monthNames)):
-            if i == 0:
-                self.monthYearList.append ({'month': self.monthNames [i], 'year':self.yearList [j]})
-            else:
-                if (self.monthNames [i - 1] != 'December'):
-                    self.monthYearList.append ({'month': self.monthNames [i], 'year': self.yearList [j]})
-                else:
-                    j += 1
-                    self.monthYearList.append ({'month': self.monthNames [i], 'year': self.yearList [j]})                
+            if i != 0 and self.monthNames[i - 1] == 'December':
+                j += 1                
+
+            self.monthYearList.append ({'month': self.monthNames [i], 'year':self.yearList [j]})                
 
     def __make_ListOfMonthNames__ (self):
         self.monthNames = []

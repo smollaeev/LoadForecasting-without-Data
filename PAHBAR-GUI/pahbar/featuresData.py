@@ -13,10 +13,10 @@ class FeaturesData:
 
     def __get_Attributes__ (self):
         self.numberOfRecords = len (self.data.index)
-        self.determine_EndDate ()
+        self.determine_EndDate ()        
 
-    def __get_Data__ (self, date_, row):
-        currentData = self.data.loc [row].to_list () [1:]
+    def __get_Data__ (self, date_, row, headers):
+        currentData = self.data.loc [row, headers].to_list () [1:]
         currentData.insert (0, date_)
         return currentData
 
@@ -48,6 +48,7 @@ class FeaturesData:
         featuresNewRow.append (daysFeatures [1][3])
         featuresNewRow.append (daysFeatures [2][3])
         featuresNewRow.append (daysFeatures [3][3])
+        featuresNewRow.append (daysFeatures [4][3])
         featuresNewRow.append (daysFeatures [0][4])
         featuresNewRow.append (daysFeatures [0][5])
         featuresNewRow.append (CalendarData.get_DayLength (dateList [0].timetuple().tm_yday, 36.2605))
@@ -66,7 +67,7 @@ class FeaturesData:
         except:
             self.endDate = self.data.iloc [self.numberOfRecords - 1]['Date']
 
-    def get_DataByDate (self, dates):
+    def get_DataByDate (self, dates, headers):
         data = []
         for date_ in dates:
             for i in range (self.numberOfRecords):
@@ -75,7 +76,7 @@ class FeaturesData:
                 except:
                     temp = self.data.loc [len (self.data) -1 - i, 'Date']
                 if temp == date_:
-                    data.append (self.__get_Data__ (date_, len (self.data) - 1 - i))
+                    data.append (self.__get_Data__ (date_, len (self.data) - 1 - i, headers))
                     break
         return data
 
@@ -106,7 +107,7 @@ class FeaturesData:
             except:
                 newDate = dates [i]                
             featuresNewRow.append (dates [i])
-            dateList = [newDate, newDate - timedelta (days=2), newDate - timedelta (days=7), newDate + timedelta (days= 1)]
+            dateList = [newDate, newDate - timedelta (days = 1), newDate - timedelta (days=2), newDate - timedelta (days=7), newDate + timedelta (days= 1)]
             try:
                 daysFeatures = FeaturesData.__get_CalendarData__ (dateList)                   
             except Exception as inst:

@@ -12,12 +12,6 @@ class Analysis:
         self.headers = self.__get_Headers__ ()
         self.error = []
         self.absoluteError = []
-
-    # def __get_AvailableDates__ (self):
-    #     dates = []
-    #     for i in range (len (self.predictedData)):
-    #         dates.append (self.predictedData [i][1])
-    #     return dates
         
     def __get_Headers__ (self):
         headers = ['Type', 'Date']
@@ -122,12 +116,17 @@ class Analysis:
         self.__get_Error__ ()
         self.__make_AnalysisResults__ ()
 
-    def plot_AnalysisResults (self, from_date):
+    def plot_AnalysisResults(self, from_date):
         shamsiFromDate = JalaliDate (from_date)
         self.__extract_DataForPlot__ (shamsiFromDate)
         if not (self.dataForPlot):
-            result = dict ({'English':'There is no result available!', 'Farsi':'نتایج آنالیز در دسترس نیست'})
-            return result
+            return dict(
+                {
+                    'English': 'There is no result available!',
+                    'Farsi': 'نتایج آنالیز در دسترس نیست',
+                }
+            )
+
         self.__create_Fig__ (shamsiFromDate)
         return self.fig
         

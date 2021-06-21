@@ -85,17 +85,15 @@ def getYear(year):
     soup = BS(page, 'lxml')
     monthsHTML = soup.select(
         '#ctl00_cphTop_Sampa_Web_View_EventUI_EventYearCalendar10cphTop_3417_pnlYearCalendar .panel.panel-body')
-    shamsiMonth = 0
     result = []
-    for m in monthsHTML:
-        daysList = []
-        shamsiMonth += 1
+    daysList = []
+    for shamsiMonth, m in enumerate(monthsHTML, start=1):
         curr_months = m.select('.eventCalendar .header .dates > span')[0]
         miladi_months = __getMiladiMonths__(curr_months.select('.miladi')[0].string)
         qamari_months = __getQamariMonths__(curr_months.select('.qamari')[0].string)
-    
+
         daysHTML = m.select('.eventCalendar .mainCalendar .dayList > div')
-        
+
         miladiMonthChanged = False
         qamariMonthChanged = False
         qamariMonthChangedAgain=False
@@ -109,17 +107,14 @@ def getYear(year):
                 miladi = d.select('.miladi')[0].string
                 if miladi == '01':
                     miladiMonthChanged = True
-                if miladiMonthChanged:
-                    miladiMonth = miladi_months[1]
-                else:
-                    miladiMonth = miladi_months[0]
-
+                miladiMonth = miladi_months[1] if miladiMonthChanged else miladi_months[0]
                 miladiDay = f'{miladiMonth}/{miladi}'
                 qamari = unidecode (d.select('.qamari')[0].string)
-                if qamari == '01' and not qamariMonthChanged and jalali != '1':
-                    qamariMonthChanged = True
-                elif qamari == '01' and  qamariMonthChanged:
-                    qamariMonthChangedAgain=True
+                if qamari == '01':
+                    if not qamariMonthChanged and jalali != '1':
+                        qamariMonthChanged = True
+                    elif qamariMonthChanged:
+                        qamariMonthChangedAgain=True
 
                 if qamariMonthChanged and not qamariMonthChangedAgain:
                     qamariMonth = qamari_months[1]

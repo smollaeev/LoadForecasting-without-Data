@@ -84,11 +84,9 @@ class DataTree(ttk.Frame):
         tree['columns'] = header_list
         for header in header_list:
             tree.heading(header,text=header, anchor='c')
-            tree.column(header,width = 150, anchor ='c') 
-        if type == None:
-            i = 0
-            for row in dataListCopy:
-                i += 1
+            tree.column(header,width = 150, anchor ='c')
+        if type is None:
+            for i, row in enumerate(dataListCopy, start=1):
                 if (i % 2 == 1):
                     tree.insert("", "end", values=row,tags = ('oddrow',))
                 else:
@@ -97,9 +95,7 @@ class DataTree(ttk.Frame):
             tree.tag_configure('oddrow', background='#baefda')
 
         if type == 'analysis':
-            i = 0
-            for row in dataListCopy:
-                i += 1
+            for i, row in enumerate(dataListCopy, start=1):
                 if (i % 3 == 0):
                     tree.insert("", "end", values=row,tags = ('Error',))
                 else:

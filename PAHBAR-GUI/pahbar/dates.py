@@ -15,9 +15,8 @@ class Dates:
         return dates
 
     @staticmethod
-    def get_DateList (dateString):
+    def get_DateList(dateString):
         if '/' in dateString:
-            dateList = str (dateString).split ('/')
+            return str (dateString).split ('/')
         else:
-            dateList = str (dateString).split ('-')
-        return dateList
+            return str (dateString).split ('-')

@@ -17,13 +17,16 @@ class Output:
         for i in range (len (self.predictDates)):
             self.predictDays.append (PredictDay (self.predictDates [i], self.predictDates [i]))
 
-    def convert_DatatoDict (self, from_date, to_date):
-        data = []
-        for i in range (len (self.output)):
-            if (self.output.loc [i]['تاریخ'] >= from_date) and (self.output.loc [i]['تاریخ'] <= to_date):
-                data.append (self.output.iloc [i,:].values.tolist ())
-        for i in range (len (data)):
-            data [i][0] = JalaliDate (data [i][0]) 
+    def convert_DatatoDict(self, from_date, to_date):
+        data = [
+            self.output.iloc[i, :].values.tolist()
+            for i in range(len(self.output))
+            if (self.output.loc[i]['تاریخ'] >= from_date)
+            and (self.output.loc[i]['تاریخ'] <= to_date)
+        ]
+
+        for datum in data:
+            datum[0] = JalaliDate(datum[0])
         self.dataDictionary = dict ({'header':self.outputHeaders, 'data': data})    
 
     def make_CompleteListOfOneRow (self, row, features, predictedLoad):

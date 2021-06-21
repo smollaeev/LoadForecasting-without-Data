@@ -27,17 +27,16 @@ class Predictor:
         X.scale_Features (self.X_train)
         return X
 
-    def predict (self, predictDates, R, features, output, replace = False):
-        yesterdayLoad = R.unpickle_Data ('YesterdayLoad')        
+    def predict(self, predictDates, R, features, output, replace = False):
+        yesterdayLoad = R.unpickle_Data ('YesterdayLoad')
         for row in range (len (predictDates)):
-            historicalLoadList = self.__get_HistoricalLoad__ (R, predictDates [row], yesterdayLoad)  
+            historicalLoadList = self.__get_HistoricalLoad__ (R, predictDates [row], yesterdayLoad)
             X = self.__get_Input__ (features.loc [row, 'Eide Mazhabi':].values, historicalLoadList)  
 
             completeFeatures = list (features.loc [row].values)
             completeFeatures.extend (historicalLoadList)
 
-            d = []
-            d.append (predictDates [row])
+            d = [predictDates[row]]
             y_pred = self.regressors.predict (X.data)
             y_pred = y_pred.reshape (1,-1)
             for i in range (24):
@@ -52,10 +51,10 @@ class Predictor:
                 R.dataSet.featuresData.numberOfRecords += 1
                 R.dataSet.featuresData.determine_EndDate ()
                 R.dataSet.loadData.determine_EndDate ()
-            
+
             output.make_ListOfPredictedLoad (d)
             output.output.loc [row] = d
-            
+
             R.outputHistory.loc [len (R.outputHistory)] = output.predictedLoad
 
         if not (replace):

@@ -1,4 +1,4 @@
-from pahbar.dates import Dates
+from pahbar.dataFile import DataFile
 from pahbar.independentVariables import IndependentVariables
 from pahbar.featuresData import FeaturesData
 import threading
@@ -23,6 +23,9 @@ class Logic ():
         self.R.dataSet.determine_EndDate ()
         self.pathToLoadData = None
         self.predictionAnalysis = None
+        Logic.__create_LogFile__ ()
+        
+    def __create_LogFile__ ():
         logging.basicConfig (filename='PAHBAR.log', level=logging.DEBUG)
         dateTime = JalaliDate.today ()
         logging.info (f'Date: {dateTime}')
@@ -46,7 +49,7 @@ class Logic ():
             logging.warning (inst)
             return False
 
-    def export_Data (self, file_path)->bool:
+    def export_Data(self, file_path) -> bool:
         '''
         exports data to excel file in the given path 
 
@@ -57,16 +60,19 @@ class Logic ():
             bool: if export is successul returns True otherwise returns False
         '''
         try:
-            featuresData = self.R.unpickle_Data ('FeaturesData')
-            loadData = self.R.unpickle_Data ('LoadData').iloc [:, :-1]
-            dataSet = featuresData.join (loadData)
-            Repository.export_AsXLSX (dataSet, file_path)
-            logging.info (f'DataSet {self.R.selectedDataSet} has been exported -- {file_path}')
-            return True
+            return self.__convet_DataToXlsx__(file_path)
         except Exception as inst:
-            print (inst)
-            logging.error (inst)
+            print(inst)
+            logging.error(inst)
             return False
+
+    def __convet_DataToXlsx__(self, file_path):
+        featuresData = self.R.unpickle_Data ('FeaturesData')
+        loadData = self.R.unpickle_Data ('LoadData').iloc [:, :-1]
+        dataSet = featuresData.join (loadData)
+        Repository.export_AsXLSX (dataSet, file_path)
+        logging.info (f'DataSet {self.R.selectedDataSet} has been exported -- {file_path}')
+        return True
     
     def get_Data (self, from_date, to_date)->dict:
         '''
@@ -89,7 +95,7 @@ class Logic ():
             logging.info ('Data displayed successfully!')
         return dataDictionary
 
-    def fetch_OnlineData (self)->bool:
+    def fetch_OnlineData(self) -> bool:
         '''
         fteches online weather and calendar data
 
@@ -105,21 +111,29 @@ class Logic ():
             logging.info (f'Attempted to update dataSet {self.R.selectedDataSet}... Last day of dataSet is {self.R.dataSet.endDate}')
             if not (self.pathToLoadData) or not (os.path.isfile (self.pathToLoadData)):
                 logging.info ("No load data!")
-                result = dict ({'English' : "No load data! \"Import Load Data\" first!", 'Farsi' : 'اطلاعات بار موجود نیست! ابتدا اطلاعات بار را بارگذاری نمایید.'})
-                return result
+                return dict(
+                    {
+                        'English': "No load data! \"Import Load Data\" first!",
+                        'Farsi': 'اطلاعات بار موجود نیست! ابتدا اطلاعات بار را بارگذاری نمایید.',
+                    }
+                )
+
+
+            if DataFile.check_ForNull (self.pathToLoadData):
+                return self.__report__(
+                    'Please make sure your load data is complete and try again!',
+                    'Please make sure your load data is complete and try again! There may be blank cells in your load data! Please fill in the blank cells or delete the row with Nan values!',
+                    'لطفاً از کامل بودن اطلاعات بار اطمینان حاصل کنید و مجدداً تلاش نمایید! اگر در داده‌ها خانه‌های خالی وجود دارد، سطر مربوطه را حذف نمایید',
+                )
+
+            if DataFile.check_ForZero (self.pathToLoadData):
+                return self.__report__(
+                    'Please make sure your load data values are non-zero and try again!',
+                    'Please make sure your load data is correct and try again! There may be values of zero in your load data!',
+                    'لطفاً از صحیح بودن اطلاعات بار اطمینان حاصل کنید و مجدداً تلاش نمایید! اگر در داده‌ها مقادیر صفر وجود دارد، مقادیر درست را وارد نمایید',
+                )
 
             loadData = pd.read_excel (self.pathToLoadData, engine='openpyxl')
-            temp = loadData.isnull().values.any()
-            if temp:
-                logging.warning ('Please make sure your load data is complete and try again!')
-                result = dict ({'English':'Please make sure your load data is complete and try again! There may be blank cells in your load data! Please fill in the blank cells or delete the row with Nan values!', 'Farsi': 'لطفاً از کامل بودن اطلاعات بار اطمینان حاصل کنید و مجدداً تلاش نمایید! اگر در داده‌ها خانه‌های خالی وجود دارد، سطر مربوطه را حذف نمایید'})
-                return result
-
-            zeroTemp = loadData.eq(0).any().any()
-            if zeroTemp:
-                logging.warning ('Please make sure your load data values are non-zero and try again!')
-                result = dict ({'English':'Please make sure your load data is correct and try again! There may be values of zero in your load data!', 'Farsi': 'لطفاً از صحیح بودن اطلاعات بار اطمینان حاصل کنید و مجدداً تلاش نمایید! اگر در داده‌ها مقادیر صفر وجود دارد، مقادیر درست را وارد نمایید'})
-                return result
 
             historicalLoad = HistoricalLoad (self.R.dataSet, loadData = loadData)
             if historicalLoad.endDate == date.today () - timedelta (days=1):
@@ -131,25 +145,33 @@ class Logic ():
             yesterdayLoadData = self.R.unpickle_Data ('YesterdayLoad')
             if not (self.R.dataSet.update (yesterdayLoadData, historicalLoad, stopDate)):
                 if self.R.dataSet.featuresData.weatherDataUnavailable:
-                    logging.warning ('Weather data unavailable!')
-                    result = dict ({'English':'No internet connection!', 'Farsi': 'لطفاً اتصال به اینترنت را بررسی کنید!'})
-                    return result
+                    return self.__report__(
+                        'Weather data unavailable!',
+                        'No internet connection!',
+                        'لطفاً اتصال به اینترنت را بررسی کنید!',
+                    )
+
                 if self.R.dataSet.featuresData.calendarDataUnavailable:
-                    logging.warning ('Calendar data unavailable!')
-                    result = dict ({'English':'No internet connection!', 'Farsi': 'لطفاً اتصال به اینترنت را بررسی کنید!'})
-                    return result
-                         
-        except Exception as inst: 
-            print (inst)           
-            logging.error (inst)
-            return False 
-        
+                    return self.__report__(
+                        'Calendar data unavailable!',
+                        'No internet connection!',
+                        'لطفاً اتصال به اینترنت را بررسی کنید!',
+                    )
+
+        except Exception as inst:
+            print(inst)
+            logging.error(inst)
+            return False
         self.R.pickle_Data (self.R.dataSet.featuresData.data, 'FeaturesData')
         self.R.pickle_Data (self.R.dataSet.loadData.data, 'LoadData')
         self.train ()
 
         logging.info (f'DataSet {self.R.selectedDataSet} has been updated successfully!')
         return True                  
+
+    def __report__(self, arg0, arg1, arg2):
+        logging.warning(arg0)
+        return dict({'English': arg1, 'Farsi': arg2})                  
 
     def determine_PredictDates (self, from_date, to_date):
         logging.info (f'Attempted to predict load ({from_date} - {to_date})')
@@ -169,7 +191,7 @@ class Logic ():
             self.invalidDate = 1
             return self.invalidDate
 
-    def get_Prediction (self, from_date, to_date, replace = False)->dict:
+    def get_Prediction(self, from_date, to_date, replace = False) -> dict:
         '''
         predicts for the requested period(including begining and end) and returns the results 
 
@@ -204,17 +226,16 @@ class Logic ():
                 dates.append (d)
             d += timedelta (days=1)
         features = outputFeatures.get_Features (dates)
-        if isinstance (features, bool):
-            if not (features):
-                if outputFeatures.weatherDataUnavailable:
-                    logging.warning ('Weather Data Unavailable!')
-                    result = dict ({'English':'No internet connection!', 'Farsi':'اتصال اینترنت برقرار نیست'})
-                    return result
-                if outputFeatures.calendarDataUnavailable:
-                    logging.warning ('Calendar Data Unavailable!')
-                    result = dict ({'English':'No internet connection!', 'Farsi':'اتصال اینترنت برقرار نیست'})
-                    return result
-                    
+        if isinstance(features, bool) and not (features):
+            if outputFeatures.weatherDataUnavailable:
+                logging.warning ('Weather Data Unavailable!')
+                result = dict ({'English':'No internet connection!', 'Farsi':'اتصال اینترنت برقرار نیست'})
+                return result
+            if outputFeatures.calendarDataUnavailable:
+                logging.warning ('Calendar Data Unavailable!')
+                result = dict ({'English':'No internet connection!', 'Farsi':'اتصال اینترنت برقرار نیست'})
+                return result
+
         try:
             logging.info ('Trying to predict load ...')
             predictor.predict (self.output.predictDates, self.R, features, self.output, replace = replace)
@@ -254,7 +275,7 @@ class Logic ():
             logging.error (inst)
             return False
 
-    def train (self, queue = None)->bool:
+    def train(self, queue = None) -> bool:
         '''
         trians the model synchronously in another thread
 
@@ -269,35 +290,53 @@ class Logic ():
         '''
         logging.info ('Attempted to train the model ...')
         try:
-            logging.info ('Preparing data ...')
-            X_train, y_train = self.R.get_TrainSet ()
-            X_train = IndependentVariables.prepare_Data (X_train)
-            self.R.pickle_Data (X_train, 'Preprocessed_X_Train_')
-            trainer = Trainer (self.R, X_train, y_train)
-            if queue:
-                t = ThreadedTask (trainer.train, queue)
-                t.start()
-            else:
-                trainer.train ()
-            logging.info ('Model trained successfully!')
+            self.__train__(queue)
         except Exception as inst:
-            print (inst)
-            logging.error (inst)    
+            print(inst)
+            logging.error(inst)
+
+    def __train__(self, queue):
+        logging.info ('Preparing data ...')
+        X_train, y_train = self.R.get_TrainSet ()
+        X_train = IndependentVariables.prepare_Data (X_train)
+        self.R.pickle_Data (X_train, 'Preprocessed_X_Train_')
+        trainer = Trainer (self.R, X_train, y_train)
+        if queue:
+            t = ThreadedTask (trainer.train, queue)
+            t.start()
+        else:
+            trainer.train ()
+        logging.info ('Model trained successfully!')    
 
     def select_DataSet (self, mode):
         self.R.select_DataSet (mode)
 
-    def edit_DataSet (self, loadData = None):
+    def edit_DataSet(self):
         logging.info (f'Attempted to edit dataSet{self.R.selectedDataSet} ... ')
-        if not (isinstance (loadData, pd.DataFrame)):
-            if not (self.pathToLoadData) or not (os.path.isfile (self.pathToLoadData)):
-                logging.warning ('There is no load data imported!')
-                return "No load Data! \"Import CORRECT Load Data\" first!"
-            loadData = pd.read_excel (self.pathToLoadData, engine='openpyxl')
+        if not (self.pathToLoadData) or not (os.path.isfile (self.pathToLoadData)):
+            logging.warning ('There is no load data imported!')
+            return "No load Data! \"Import CORRECT Load Data\" first!"
+
+        if DataFile.check_ForNull (self.pathToLoadData):
+            return self.__report__(
+                'Please make sure your load data is complete and try again!',
+                'Please make sure your load data is complete and try again! There may be blank cells in your load data! Please fill in the blank cells or delete the row with Nan values!',
+                'لطفاً از کامل بودن اطلاعات بار اطمینان حاصل کنید و مجدداً تلاش نمایید! اگر در داده‌ها خانه‌های خالی وجود دارد، سطر مربوطه را حذف نمایید',
+            )
+
+        if DataFile.check_ForZero (self.pathToLoadData):
+            return self.__report__(
+                'Please make sure your load data values are non-zero and try again!',
+                'Please make sure your load data is correct and try again! There may be values of zero in your load data!',
+                'لطفاً از صحیح بودن اطلاعات بار اطمینان حاصل کنید و مجدداً تلاش نمایید! اگر در داده‌ها مقادیر صفر وجود دارد، مقادیر درست را وارد نمایید',
+            )
+
+        loadData = pd.read_excel (self.pathToLoadData, engine='openpyxl')
+
         newLoadData = HistoricalLoad (self.R.dataSet, loadData = loadData)
         try:
             result = self.R.dataSet.edit_LoadData (newLoadData.loadData)
-            
+
             if isinstance (result, dict):
                 logging.warning (result ['English'])
                 return result
@@ -317,35 +356,6 @@ class Logic ():
         path = os.path.join (self.data_folder_path,'Documentation.pdf')
         os.startfile (path)
 
-    def delete_Row (self, from_date, to_date):
-        logging.info (f'Attempted to delete {from_date} - {to_date} data from dataSet{self.R.selectedDataSet} ...')
-        if (to_date < self.R.dataSet.loadData.data.iloc [0]['Date'].date ()) or (from_date > self.R.dataSet.loadData.data.loc [self.R.dataSet.numberOfRecords - 1]['Date'].date ()):
-            logging.warning ('Invalid Date!')
-            result = dict ({'English':'The range you selected is not available in the dataset!', 'Farsi':'بازه انتخاب شده در دیتاست موجود نیست'})
-            return result
-        try:
-            logging.info ('Trying to predict ... ')
-            logging.info ('Trying to get predict dates ...')
-            self.determine_PredictDates (from_date, to_date)
-            predictedLoad = self.get_Prediction (from_date, to_date)
-            if isinstance (predictedLoad, dict):
-                if 'English' in predictedLoad:
-                    logging.warning (predictedLoad ['English'])
-                    return predictedLoad
-                else:
-                    logging.info ('Load predicted successfully!')
-                    newLoadData = pd.DataFrame (data = predictedLoad ['data'], columns = predictedLoad ['header'])
-            
-            logging.info (f'Trying to replace load into dataset{self.R.selectedDataSet} ...')
-            self.edit_DataSet (loadData = newLoadData)
-            self.train ()
-            logging.info ('Load replaced successfully!')
-            return True
-        except Exception as inst:
-            logging.error (inst)
-            print (inst)
-            return False
-
     def determine_TrainEndDate (self):
         logging.info ('Trying to determine train end date ...')
         self.R.dataSet.determine_EndDate ()
@@ -364,20 +374,18 @@ class Logic ():
             result = dict ({'English':msg, 'Farsi':'بازه نامعتبر! بار بازه انتخاب شده، هنوز پیش‌بینی نشده است'})
             return result
 
-        # datesStr = []
         dates = []
         for i in range (len (self.R.predictedDataHistory)):
             dates.append (self.R.predictedDataHistory [i][1])
-            # dates.append (Dates.get_DateList (datesStr [i]))
-            # dates [i] = JalaliDate (int (dates [i][0]), int (dates [i][1]), int (dates [i][2]))
 
         logging.info (f'Trying to get the actual values from dataSet{self.R.selectedDataSet}')
         for i in range (len (dates)):
             dates [i] = dates [i].to_gregorian ()
-        data = self.R.dataSet.get_DataByDate (dates)
-        actualValues = []
-        for i in range (len (data)):
-            actualValues.append ([JalaliDate (data[i][0])] + data [i][-26:-2])
+        headers = self.R.dataSet.loadData.headers [-26:-2]
+        headers.insert (0, 'Date')
+        actualValues = self.R.dataSet.loadData.get_DataByDate (dates, headers)
+        for i in range (len (actualValues)):
+            actualValues [i][0] = JalaliDate (actualValues[i][0])
         for i in range (len (actualValues)):
             actualValues [i].insert (0, 'Actual')
 
@@ -408,26 +416,28 @@ class Logic ():
             print (inst)
             return False
 
-    def plot_AnalysisResults (self, from_date, to_date):
+    def plot_AnalysisResults(self, from_date, to_date):
         logging.info (f'Attempted to plot analysis results ... ({from_date} - {to_date})')
         if from_date != to_date:
-            msg = "Sorry! Only one prediction result can be shown!"
-            logging.warning (msg)
-            result = dict ({'English':msg, 'Farsi':'متاسفانه امکان نمایش نمودارهای بیش از یک روز وجود ندارد ... لطفاً فقط یک تاریخ را انتخاب نمایید'})
-            return result
+            return self.__report__(
+                "Sorry! Only one prediction result can be shown!", "Sorry! Only one prediction result can be shown!",
+                'متاسفانه امکان نمایش نمودارهای بیش از یک روز وجود ندارد ... لطفاً فقط یک تاریخ را انتخاب نمایید',
+            )
+
         logging.info ('Plotting ... ')
         if not (self.predictionAnalysis):
-            msg = 'You should try "Analyze Prediction" first!'
-            logging.warning (msg)
-            result = dict ({'English':msg, 'Farsi':'لازم است ابتدا آنالیز پیش‌بینی انجام شود'})
-            return result
+            return self.__report__(
+                'You should try "Analyze Prediction" first!', 'You should try "Analyze Prediction" first!',
+                'لازم است ابتدا آنالیز پیش‌بینی انجام شود',
+            )
+
         fig = self.predictionAnalysis.plot_AnalysisResults (from_date)
         if isinstance (fig, dict):
             logging.warning (fig ['English'])
-            return fig
         else:
             logging.info ('Prediction analysis ploted successfully!')
-            return fig
+
+        return fig
 
     def save_AnalysisPlot (self, file_path):
         logging.info ('Attempted to save analysis plot ...')

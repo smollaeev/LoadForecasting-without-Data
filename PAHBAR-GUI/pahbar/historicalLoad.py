@@ -42,11 +42,10 @@ class HistoricalLoad ():
         return historicalLoad
     
     @staticmethod
-    def __get_HistoricalLoadFromSavedLoad__ (savedLoad, date_, numberOfPreviousDays):
+    def __get_HistoricalLoadFromSavedLoad__(savedLoad, date_, numberOfPreviousDays):
         try:
             if (savedLoad [0] == date_ - timedelta (days = numberOfPreviousDays)):
-                HistoricalLoad = list (savedLoad [1:])
-                return HistoricalLoad
+                return list (savedLoad [1:])
         except:
             pass
 

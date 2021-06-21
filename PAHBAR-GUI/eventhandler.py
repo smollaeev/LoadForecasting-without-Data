@@ -12,7 +12,6 @@ class Event(Enum):
     EXPORT_Prediction_BUTTON = 'EXPORT_Prediction_BUTTON'
     TRAIN_BUTTON = 'TRAIN_BUTTON'
     DOCUMENTATION = 'DOCUMENTATION'
-    DELETE_ROW = 'DELETE_ROW'
     DETERMINE_TRAINENDDATE = 'DETERMINE_TRAINENDDATE'
     ANALYZE_PREDICTION = 'ANALYZE_PREDICTION'
     EXPORT_ANALYSIS_RESULTS = 'EXPORT_ANALYSIS_RESULTS'
@@ -48,8 +47,6 @@ class EventHandler():
             return self.prediction.edit_DataSet ()
         elif event == Event.DOCUMENTATION:
             self.prediction.show_Documentation ()
-        elif event == Event.DELETE_ROW:
-            return self.prediction.delete_Row (**kwargs)
         elif event == Event.DETERMINE_TRAINENDDATE:
             return self.prediction.determine_TrainEndDate ()
         elif event == Event.ANALYZE_PREDICTION:

@@ -34,25 +34,27 @@ class CalendarData:
             for i in range (len (jsonResponseShamsi['values'])):
                 if jsonResponseShamsi['values'][i]['dayoff'] == True:
                     return True
-    @staticmethod
-    def __is_Ghamari_Holiday__ (jsonResponseGhamari):
+
+    def __is_Ghamari_Holiday__ (self, jsonResponseGhamari):
         if jsonResponseGhamari['values']:
             for i in range (len (jsonResponseGhamari ['values'])):
-                if  jsonResponseGhamari ['values'][i]['dayoff'] == True:
+                if  (jsonResponseGhamari ['values'][i]['dayoff'] == True):
                     return True
+        elif (self.hijriMonth == 10) and (self.hijriDay == 2):
+            return True
 
-    def __is_Holiday__ (self, jsonResponseShamsi, jsonResponseGhamari):
+    def __is_Holiday__(self, jsonResponseShamsi, jsonResponseGhamari):
         if CalendarData.__is_ShamsiHoliday__ (jsonResponseShamsi):
             return True
-        if CalendarData.__is_Ghamari_Holiday__ (jsonResponseGhamari):
-            return True        
-        return False
+        return bool(self.__is_Ghamari_Holiday__ (jsonResponseGhamari))
 
     def __is_EideMazhabi__ (self, jsonResponseGhamari):
         if jsonResponseGhamari['values']:
             for i in range (len (jsonResponseGhamari ['values'])):
-                if (jsonResponseGhamari ['values'][i]['occasion'] in self.eideMazhabiOccasions) or ((self.hijriMonth == 10) and (self.hijriDay == 2)):
+                if (jsonResponseGhamari ['values'][i]['occasion'] in self.eideMazhabiOccasions):
                     return True
+        elif (self.hijriMonth == 10) and (self.hijriDay == 2):
+            return True
         return False
 
     def __is_FirstTenDaysOfMoharram__ (self):
@@ -83,8 +85,8 @@ class CalendarData:
             hourAngle = np.rad2deg(np.arccos(-np.tan(latInRad) * np.tan(np.deg2rad(declinationOfEarth))))
             return 2.0*hourAngle/15.0        
 
-    def __get_ResponseFromShamsiAPI__ (self):
-        for i in range (5):
+    def __get_ResponseFromShamsiAPI__(self):
+        for _ in range (5):
             try:
                 response = requests.get (f'https://farsicalendar.com/api/sh/{self.jalaliDay}/{self.jalaliMonth}',verify=False)
                 jsonResponse = json.loads (response.text)
@@ -93,8 +95,8 @@ class CalendarData:
                 continue
         return jsonResponse
 
-    def __get_ResponseFromGhamariAPI__ (self):
-        for i in range (5):
+    def __get_ResponseFromGhamariAPI__(self):
+        for _ in range (5):
             try:
                 response = requests.get (f'https://farsicalendar.com/api/ic/{self.hijriDay}/{self.hijriMonth}',verify=False)
                 jsonResponse = json.loads (response.text)
