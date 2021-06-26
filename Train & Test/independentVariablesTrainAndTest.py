@@ -6,10 +6,10 @@ import numpy as np
 
 class IndependentVariables ():
     def __init__ (self, data):
-        self.data = data  
+        self.data = data [:, 1:] 
 
     def encode_OneHot_FitTransform (self):
-        self.ct_WeekDays = ColumnTransformer ([('one_hot_encoder', OneHotEncoder(), [7])], remainder='passthrough')
+        self.ct_WeekDays = ColumnTransformer ([('one_hot_encoder', OneHotEncoder(), [8])], remainder='passthrough')
         self.data = np.array (self.ct_WeekDays.fit_transform (self.data), dtype= 'float64')
         self.data = self.data [:, 1:]
 
@@ -19,7 +19,7 @@ class IndependentVariables ():
         
     def fit_FeatureScaler (self):
         self.sc_X = StandardScaler()
-        self.sc_X.fit (self.data [:, 6:])
+        self.sc_X.fit (self.data [:, 14:])
 
     def scale_Features (self, X_train):        
-        self.data [:, 6:] = X_train.sc_X.transform (self.data [:, 6:])
+        self.data [:, 14:] = X_train.sc_X.transform (self.data [:, 14:])

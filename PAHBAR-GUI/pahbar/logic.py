@@ -206,9 +206,12 @@ class Logic ():
         '''   
         try:
             self.R.processed_X_train = self.R.unpickle_Data ('Preprocessed_X_Train_')
-            self.R.regressors = self.R.unpickle_Data ('Regressors_')
+            self.R.regressors1 = self.R.unpickle_Data ('Regressors1_')
+            self.R.regressors2 = self.R.unpickle_Data ('Regressors2_')
+            self.R.regressors3 = self.R.unpickle_Data ('Regressors3_')
+            self.R.regressors4 = self.R.unpickle_Data ('Regressors4_')
             logging.info ('Trained Algorithms data has fetched successfully ... ')
-            predictor = Predictor (self.R.processed_X_train, self.R.regressors)
+            predictor = Predictor (self.R.processed_X_train, self.R.regressors1, self.R.regressors2, self.R.regressors3, self.R.regressors4)
         except Exception as inst:
             print (inst)
             msg = 'No train history available! Please train the model!'
