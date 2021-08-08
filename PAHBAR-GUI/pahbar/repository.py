@@ -7,6 +7,7 @@ import pickle
 import os.path
 from persiantools.jdatetime import JalaliDate
 import logging
+from pahbar.featuresData import STFeaturesData
 
 class Repository:
 
@@ -17,21 +18,31 @@ class Repository:
         for i in range (1, 25):
             self.outputHeaders.append (f'H{i}')
         self.dataSet = DataSet (self.unpickle_Data ('FeaturesData'), self.unpickle_Data ('LoadData'))
-        self.outputHistory = self.unpickle_Data ('Output')
+        self.STOutputHistory = self.unpickle_Data ('Output_STLF_')
+        self.MTOutputHistory = self.unpickle_Data ('Output_MTLF_')
         try:
             self.yesterdayLoadData = self.unpickle_Data ('YesterdayLoad')
         except:
             pass
 
-    def get_TrainSet (self):
+    def get_ShortTermTrainSet (self):
+        hourlyFeatures = STFeaturesData (self.dataSet.featuresData.data)
+        hourlyLoadData = self.dataSet.loadData.convert_ToHourly ()
+        X = hourlyFeatures.data.iloc [:, 1:].join (hourlyLoadData[['LastWeekLoad', 'YesterdayLoad']])
+        X = X.values
+        X_train = IndependentVariables (X)
+        y_train = hourlyLoadData ['Load'].values
+        return X_train, y_train
+
+    def get_MidTermTrainSet (self):
         X = self.dataSet.featuresData.data.iloc [:, 1:].join (self.dataSet.loadData.data.iloc [:, :-27])
         X = X.values
         X_train = IndependentVariables (X)
         y_train = self.dataSet.loadData.data.iloc [:, -27:-3].values
         return X_train, y_train
 
-    def export_PredictionAsXLSX (self, fromDate, toDate, path):
-        self.get_PredictedValues (from_date = fromDate, to_date = toDate)
+    def export_PredictionAsXLSX (self, fromDate, toDate, path, predictionMode):
+        self.get_PredictedValues (from_date = fromDate, to_date = toDate, predictionMode = predictionMode)
         if self.predictedDataHistory:
             for i in range (len (self.predictedDataHistory)):
                 for j in range (len (self.predictedDataHistory [i])):
@@ -41,11 +52,9 @@ class Repository:
             exportedOutput = pd.DataFrame (data = self.predictedDataHistory, columns= self.outputHeaders)
             exportedOutput.to_excel (path)
 
-    def get_PredictedValues (self, from_date, to_date):
-        self.outputHistory = self.unpickle_Data ('Output')
-
+    def get_PredictedValues (self, from_date, to_date, predictionMode):
+        self.outputHistory = self.unpickle_Data (f'Output_{predictionMode}LF_')
         self.predictedDataHistory = []
-
         currentDate = from_date - timedelta (days=1)
         while (currentDate != to_date):
             currentDate += timedelta (days=1)
@@ -86,10 +95,14 @@ class Repository:
         if self.selectedDataSet != mode:
             self.selectedDataSet = mode
             self.dataSet = DataSet (self.unpickle_Data ('FeaturesData'), self.unpickle_Data ('LoadData'))
-            self.outputHistory = self.unpickle_Data ('Output') 
+            self.STOutputHistory = self.unpickle_Data ('Output_STLF_') 
+            self.MTOutputHistory = self.unpickle_Data ('Output_MTLF_') 
  
-    def export_AllPredictionHistory (self, file_path):
-        self.outputHistory = self.unpickle_Data ('Output')
+    def export_AllPredictionHistory (self, file_path, midTerm = False):
+        if midTerm:
+            self.outputHistory = self.unpickle_Data ('Output_MTLF_')
+        else:
+            self.outputHistory = self.unpickle_Data ('Output_STLF_')
         for i in range (len (self.outputHistory)):
             for j in range (1, 25):
                 self.outputHistory.iloc [i, self.outputHistory.columns.get_loc(f'H{j}')] = round (self.outputHistory.iloc [i][f'H{j}'], 3)

@@ -73,7 +73,7 @@ def __is_LastDayOfSafar__ (days):
     return False
 
 def getYear(year):
-    driver = webdriver.Firefox()
+    driver = webdriver.Chrome()
     driver.get("http://www.time.ir/fa/eventyear")
     year_selector = driver.find_element_by_id(
         'ctl00_cphTop_Sampa_Web_View_EventUI_EventYearCalendar10cphTop_3417_txtYear')
@@ -127,6 +127,9 @@ def getYear(year):
     return result
 
 def __get_DataFromTimeIR__ (inputDates):
+    # options = webdriver.FirefoxOptions ()
+    # options.headless = True
+    # driver = webdriver.Firefox (options = options)
     options = webdriver.ChromeOptions ()
     options.headless = True
     driver = webdriver.Chrome (options = options)

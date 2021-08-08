@@ -8,9 +8,11 @@ class Event(Enum):
     EDIT_DATA = 'EDIT_DATA'
     DISPLAY_DATA_BUTTON = 'DISPLAY_DATA_BUTTON'
     DATA_DISPLAY_RADIO_BUTTON = 'DATA_DISPLAY_RADIO_BUTTON'
-    DISPLAY_PREDICTION_BUTTON = 'DISPLAY_PREDICTION_BUTTON'
+    DISPLAY_ST_PREDICTION_BUTTON = 'DISPLAY_ST_PREDICTION_BUTTON'
+    DISPLAY_MT_PREDICTION_BUTTON = 'DISPLAY_MT_PREDICTION_BUTTON'
     EXPORT_Prediction_BUTTON = 'EXPORT_Prediction_BUTTON'
-    TRAIN_BUTTON = 'TRAIN_BUTTON'
+    STLF_TRAIN_BUTTON = 'STLF_TRAIN_BUTTON'
+    MTLF_TRAIN_BUTTON = 'MTLF_TRAIN_BUTTON'
     DOCUMENTATION = 'DOCUMENTATION'
     DETERMINE_TRAINENDDATE = 'DETERMINE_TRAINENDDATE'
     ANALYZE_PREDICTION = 'ANALYZE_PREDICTION'
@@ -18,7 +20,8 @@ class Event(Enum):
     PLOT_RESULTS = 'PLOT_RESULTS'
     SAVE_ANALYSIS_PLOT = 'SAVE_ANALYSIS_PLOT'
     CALCULATE_ERRORATTRIBUTES = 'CALCULATE_ERRORATTRIBUTES'
-    EXPORT_HISTORY_BUTTON = 'EXPORT_HISTORY_BUTTON'
+    EXPORT_STLF_HISTORY_BUTTON = 'EXPORT_STLF_HISTORY_BUTTON'
+    EXPORT_MTLF_HISTORY_BUTTON = 'EXPORT_MTLF_HISTORY_BUTTON'
     GET_LAST_TRAIN_DATE = 'GET_LAST_TRAIN_DATE'
     REMOVE_FILE_PATH = 'REMOVE_FILE_PATH'
 
@@ -35,12 +38,16 @@ class EventHandler():
             return self.prediction.fetch_OnlineData()
         elif event == Event.DISPLAY_DATA_BUTTON :
             return self.prediction.get_Data(**kwargs)
-        elif event == Event.DISPLAY_PREDICTION_BUTTON :
-            return self.prediction.get_Prediction(**kwargs)
+        elif event == Event.DISPLAY_ST_PREDICTION_BUTTON :
+            return self.prediction.get_STPrediction(**kwargs)
+        elif event == Event.DISPLAY_MT_PREDICTION_BUTTON :
+            return self.prediction.get_MTPrediction(**kwargs)
         elif event == Event.EXPORT_Prediction_BUTTON :
             return self.prediction.export_Prediction(**kwargs)
-        elif event == Event.TRAIN_BUTTON :
-            return self.prediction.train(**kwargs)
+        elif event == Event.STLF_TRAIN_BUTTON :
+            return self.prediction.trainSTLF(**kwargs)
+        elif event == Event.MTLF_TRAIN_BUTTON :
+            return self.prediction.trainMTLF(**kwargs)
         elif event == Event.DATA_DISPLAY_RADIO_BUTTON:
             self.prediction.select_DataSet (**kwargs)
         elif event == Event.EDIT_DATA:
@@ -59,8 +66,10 @@ class EventHandler():
             return self.prediction.save_AnalysisPlot (**kwargs)
         elif event == Event.CALCULATE_ERRORATTRIBUTES:
             return self.prediction.calculate_ErrorAttributes ()
-        elif event == Event.EXPORT_HISTORY_BUTTON:
-            return self.prediction.export_PredictionHistory (**kwargs)
+        elif event == Event.EXPORT_STLF_HISTORY_BUTTON:
+            return self.prediction.export_STPredictionHistory (**kwargs)
+        elif event == Event.EXPORT_MTLF_HISTORY_BUTTON:
+            return self.prediction.export_MTPredictionHistory (**kwargs)
         elif event == Event.GET_LAST_TRAIN_DATE:
             return self.prediction.get_LastTrainDate ()
         elif event == Event.REMOVE_FILE_PATH:

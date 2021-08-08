@@ -1,12 +1,12 @@
 from pahbar.dataFile import DataFile
 from pahbar.independentVariables import IndependentVariables
-from pahbar.featuresData import FeaturesData
+from pahbar.featuresData import STFeaturesData, MTFeaturesData
 import threading
 from pahbar.repository import Repository
 from pahbar.trainer import Trainer
 from pahbar.predictDay import PredictDay
-from pahbar.output import Output
-from pahbar.predictor import Predictor
+from pahbar.output import STOutput, MTOutput
+from pahbar.predictor import STPredictor, MTPredictor
 import os.path
 from persiantools.jdatetime import JalaliDate
 from datetime import timedelta
@@ -164,7 +164,7 @@ class Logic ():
             return False
         self.R.pickle_Data (self.R.dataSet.featuresData.data, 'FeaturesData')
         self.R.pickle_Data (self.R.dataSet.loadData.data, 'LoadData')
-        self.train ()
+        self.trainSTLF ()
 
         logging.info (f'DataSet {self.R.selectedDataSet} has been updated successfully!')
         return True                  
@@ -191,7 +191,7 @@ class Logic ():
             self.invalidDate = 1
             return self.invalidDate
 
-    def get_Prediction(self, from_date, to_date, replace = False) -> dict:
+    def get_STPrediction(self, from_date, to_date, replace = False) -> dict:
         '''
         predicts for the requested period(including begining and end) and returns the results 
 
@@ -205,13 +205,10 @@ class Logic ():
                 'data': list of list of data all in str type
         '''   
         try:
-            self.R.processed_X_train = self.R.unpickle_Data ('Preprocessed_X_Train_')
-            self.R.regressors1 = self.R.unpickle_Data ('Regressors1_')
-            self.R.regressors2 = self.R.unpickle_Data ('Regressors2_')
-            self.R.regressors3 = self.R.unpickle_Data ('Regressors3_')
-            self.R.regressors4 = self.R.unpickle_Data ('Regressors4_')
+            self.R.processed_X_train = self.R.unpickle_Data ('Preprocessed_X_Train_STLF_')
+            self.R.regressors = self.R.unpickle_Data ('Regressors_STLF_')
             logging.info ('Trained Algorithms data has fetched successfully ... ')
-            predictor = Predictor (self.R.processed_X_train, self.R.regressors1, self.R.regressors2, self.R.regressors3, self.R.regressors4)
+            predictor = STPredictor (self.R.processed_X_train, self.R.regressors)
         except Exception as inst:
             print (inst)
             msg = 'No train history available! Please train the model!'
@@ -219,9 +216,9 @@ class Logic ():
             result = dict ({'English':msg, 'Farsi':'تاریخچه‌ای از آموزش مدل در دسترس نیست ... لطفا مدل را آموزش دهید'})
             return result   
 
-        self.output = Output (self.predictDay.predictDates, self.R.dataSet.headers)
+        self.output = STOutput (self.predictDay.predictDates, self.R.dataSet.headers)
         logging.info ('Trying to complete features of the predict days ...')
-        outputFeatures = FeaturesData (self.R.dataSet.featuresData.data)
+        outputFeatures = STFeaturesData (self.R.dataSet.featuresData.data)
         d = self.output.predictDates [0]
         dates = []
         while d != self.output.predictDates [-1] + timedelta (days=1):
@@ -247,12 +244,71 @@ class Logic ():
             logging.warning (inst)
             return None
         if replace:
-            self.train ()
+            self.trainSTLF ()
         self.output.convert_DatatoDict (from_date, to_date)
         logging.info ('Load predicted successfully!')
         return self.output.dataDictionary
 
-    def export_Prediction (self, from_date, to_date, file_path)->bool:
+    def get_MTPrediction(self, from_date, to_date) -> dict:
+        '''
+        predicts for the requested period(including begining and end) and returns the results 
+
+        Args:
+            from_date (datetime.date): the begining of the time period
+            to_date (datetime.date): the end of the time period
+
+        Returns:
+            dict: returns a dictionary having two keys 'header' and 'data'
+                'header' : a list of the headers of the data in str type
+                'data': list of list of data all in str type
+        '''  
+        try:
+            self.R.processed_X_train = self.R.unpickle_Data ('Preprocessed_X_Train_MTLF_')
+            self.R.regressors1 = self.R.unpickle_Data ('Regressors1_MTLF_')
+            self.R.regressors2 = self.R.unpickle_Data ('Regressors2_MTLF_')
+            self.R.regressors3 = self.R.unpickle_Data ('Regressors3_MTLF_')
+            self.R.regressors4 = self.R.unpickle_Data ('Regressors4_MTLF_')
+            logging.info ('Trained Algorithms data has fetched successfully ... ')
+            predictor = MTPredictor (self.R.processed_X_train, self.R.regressors1, self.R.regressors2, self.R.regressors3, self.R.regressors4)
+        except Exception as inst:
+            print (inst)
+            msg = 'No train history available! Please train the model!'
+            logging.warning (msg)
+            result = dict ({'English':msg, 'Farsi':'تاریخچه‌ای از آموزش مدل در دسترس نیست ... لطفا مدل را آموزش دهید'})
+            return result   
+
+        self.output = MTOutput (self.predictDay.predictDates, self.R.dataSet.headers)
+        logging.info ('Trying to complete features of the predict days ...')
+        outputFeatures = MTFeaturesData (self.R.dataSet.featuresData.data)
+        d = self.output.predictDates [0]
+        dates = []
+        while d != self.output.predictDates [-1] + timedelta (days=1):
+            if d != date.today () - timedelta (days = 1):
+                dates.append (d)
+            d += timedelta (days=1)
+        features = outputFeatures.get_Features (dates)
+        if isinstance(features, bool) and not (features):
+            if outputFeatures.weatherDataUnavailable:
+                logging.warning ('Weather Data Unavailable!')
+                result = dict ({'English':'No internet connection!', 'Farsi':'اتصال اینترنت برقرار نیست'})
+                return result
+            if outputFeatures.calendarDataUnavailable:
+                logging.warning ('Calendar Data Unavailable!')
+                result = dict ({'English':'No internet connection!', 'Farsi':'اتصال اینترنت برقرار نیست'})
+                return result
+
+        try:
+            logging.info ('Trying to predict load ...')
+            predictor.predict (self.output.predictDates, self.R, features, self.output)
+        except Exception as inst:
+            print (inst)
+            logging.warning (inst)
+            return None
+        self.output.convert_DatatoDict (from_date, to_date)
+        logging.info ('Load predicted successfully!')
+        return self.output.dataDictionary
+
+    def export_Prediction (self, from_date, to_date, file_path, predictionMode)->bool:
         '''
         predicts for the requested period(including begining and end) and saves the result in an xlsx file in the given file_path
 
@@ -266,7 +322,7 @@ class Logic ():
         '''
         logging.info ('Attempted to export predicted load ...')
         try:
-            self.R.export_PredictionAsXLSX (from_date, to_date, file_path)
+            self.R.export_PredictionAsXLSX (from_date, to_date, file_path, predictionMode=predictionMode)
             if not (self.R.predictedDataHistory):
                 logging.warning ('Predicted load information is not available!')
                 return False
@@ -278,7 +334,7 @@ class Logic ():
             logging.error (inst)
             return False
 
-    def train(self, queue = None) -> bool:
+    def trainSTLF(self, queue = None) -> bool:
         '''
         trians the model synchronously in another thread
 
@@ -293,22 +349,55 @@ class Logic ():
         '''
         logging.info ('Attempted to train the model ...')
         try:
-            self.__train__(queue)
+            self.__train_STLF__(queue)
         except Exception as inst:
             print(inst)
             logging.error(inst)
 
-    def __train__(self, queue):
+    def __train_STLF__(self, queue):
         logging.info ('Preparing data ...')
-        X_train, y_train = self.R.get_TrainSet ()
-        X_train = IndependentVariables.prepare_Data (X_train)
-        self.R.pickle_Data (X_train, 'Preprocessed_X_Train_')
+        X_train, y_train = self.R.get_ShortTermTrainSet ()
+        X_train = IndependentVariables.prepare_Data_STLF (X_train)
+        self.R.pickle_Data (X_train, 'Preprocessed_X_Train_STLF_')
         trainer = Trainer (self.R, X_train, y_train)
         if queue:
-            t = ThreadedTask (trainer.train, queue)
+            t = ThreadedTask (trainer.trainSTLF, queue)
             t.start()
         else:
-            trainer.train ()
+            trainer.trainSTLF ()
+        logging.info ('Model trained successfully!')
+
+    def trainMTLF(self, queue = None) -> bool:
+        '''
+        trians the model synchronously in another thread
+
+        when the training process is done (successfuly or unsuccessfuly)an arbitrary string should be added to the queue in order to notify
+        the calling thread that the task is done.
+        Args:
+            queue (queue.Queue): a synchronous queue used to notify the caller that the task is finished
+
+        Returns:
+            bool: if task is done successuly returns True otherwise returns False
+
+        '''
+        logging.info ('Attempted to train the model ...')
+        try:
+            self.__train_MTLF__(queue)
+        except Exception as inst:
+            print(inst)
+            logging.error(inst)
+
+    def __train_MTLF__(self, queue):
+        logging.info ('Preparing data ...')
+        X_train, y_train = self.R.get_MidTermTrainSet ()
+        X_train = IndependentVariables.prepare_Data_MTLF (X_train)
+        self.R.pickle_Data (X_train, 'Preprocessed_X_Train_MTLF_')
+        trainer = Trainer (self.R, X_train, y_train)
+        if queue:
+            t = ThreadedTask (trainer.trainMTLF, queue)
+            t.start()
+        else:
+            trainer.trainMTLF ()
         logging.info ('Model trained successfully!')    
 
     def select_DataSet (self, mode):
@@ -346,7 +435,7 @@ class Logic ():
             else:
                 self.R.pickle_Data (self.R.dataSet.featuresData.data, 'FeaturesData')
                 self.R.pickle_Data (self.R.dataSet.loadData.data, 'LoadData')
-                self.train ()
+                self.trainSTLF ()
                 logging.info (f'DataSet{self.R.selectedDataSet} edited successfully!')
                 return True             
         except Exception as inst:
@@ -366,10 +455,10 @@ class Logic ():
         logging.info ('Train end date determined successfully!')
         return trainEndDate
 
-    def analyze_Prediction (self, from_date, to_date):
+    def analyze_Prediction (self, from_date, to_date, predictionMode):
         logging.info (f'Attempted to analyze prediction ({from_date} - {to_date})')
         logging.info ('Trying to get output history ...')
-        self.R.get_PredictedValues (from_date, to_date)
+        self.R.get_PredictedValues (from_date, to_date, predictionMode)
 
         if not (self.R.predictedDataHistory):
             msg = 'Invalid Date! The load you selected has not been predicted yet!'
@@ -461,11 +550,22 @@ class Logic ():
         attributesList = self.predictionAnalysis.calculate_ErrorAttributes ()
         logging.info ('Calculation complete!')
         return attributesList
-    
-    def export_PredictionHistory (self, file_path):
+
+    def export_STPredictionHistory (self, file_path):
         logging.info ('Attempted to export prediction history ...')
         try:
             self.R.export_AllPredictionHistory (file_path)
+            logging.info ('Prediction history exported successfully!')
+            return True
+        except Exception as inst:
+            print (inst)
+            logging.error (inst)
+            return False
+    
+    def export_MTPredictionHistory (self, file_path):
+        logging.info ('Attempted to export prediction history ...')
+        try:
+            self.R.export_AllPredictionHistory (file_path, midTerm = True)
             logging.info ('Prediction history exported successfully!')
             return True
         except Exception as inst:
@@ -476,9 +576,9 @@ class Logic ():
     def get_LastTrainDate (self):
         logging.info ('Trying to get the last train date ...')
         try:
-            self.R.lastTrainDate = self.R.unpickle_Data ('TrainDate_')
-            logging.info (f'last train date fetched successfully! ({self.R.lastTrainDate})')
-            return self.R.lastTrainDate
+            self.R.lastTrainDateST = self.R.unpickle_Data ('TrainDate_STLF_')
+            logging.info (f'last train date fetched successfully! ({self.R.lastTrainDateST})')
+            return self.R.lastTrainDateST
         except Exception as inst:
             print (inst)
             logging.error (inst)

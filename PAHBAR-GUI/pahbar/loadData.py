@@ -1,4 +1,6 @@
 from datetime import timedelta
+import pandas as pd
+
 class LoadData:
     def __init__ (self, data):
         self.data = data
@@ -117,3 +119,24 @@ class LoadData:
             self.__add_Data__ (historicalLoadList)            
         self.determine_EndDate ()
         return True
+
+    def convert_ToHourly (self):
+        hourlyData = pd.DataFrame (columns=['Date', 'Hour', 'LastWeekLoad', 'YesterdayLoad', 'Load'])
+        dates = []
+        hours = []
+        lastWeeks = []
+        yesterdays = []
+        loads = []
+        for i in range (len (self.data)):
+            for j in range (1,25):
+                dates.append (self.data.loc [i, 'Date'])
+                hours.append (j)
+                lastWeeks.append (self.data.loc [i, f'LastWeek{j}'])
+                yesterdays.append (self.data.loc [i, f'Yesterday Load {j}'])
+                loads.append (self.data.loc [i, f'Load{j}'])
+        hourlyData ['Date'] = dates
+        hourlyData ['Hour'] = hours
+        hourlyData ['LastWeekLoad'] = lastWeeks
+        hourlyData ['YesterdayLoad'] = yesterdays
+        hourlyData ['Load'] = loads
+        return hourlyData

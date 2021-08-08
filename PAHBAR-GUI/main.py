@@ -2,6 +2,7 @@ import tkinter as tk
 from components import MainWindow
 from eventhandler import EventHandler
 import subprocess
+from xgboost import core
 
 event_handler = EventHandler ('./data')
 root = tk.Tk ()

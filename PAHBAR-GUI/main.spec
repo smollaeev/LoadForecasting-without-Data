@@ -4,10 +4,10 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['D:\\Work\\SIRCo\\loadForecasting\\theNewSoftware\\Power-consumption-forecasting-software'],
+             pathex=['C:\\Users\\User\\Documents\\Work\\SIRCo\\loadForecasting\\theNewSoftware\\Power-consumption-forecasting-software'],
              binaries=[],
              datas=[('images/header.png', './images')],
-             hiddenimports=['cython', 'sklearn', 'sklearn.ensemble', 'sklearn.neighbors._typedefs', 'sklearn.neighbors._quad_tree', 'sklearn.tree._utils', 'sklearn.utils._cython_blas','sklearn.preprocessing', 'sklearn.compose', 'cytoolz.compose', 'greenlet', 'sklearn.utils.sparsetools._graph_validation', 'sklearn.utils.sparsetools._graph_tools', 'scipy.special._ufuncs_cxx', 'sklearn.utils.lgamma', 'sklearn.utils.weight_vector', 'selenium', 'sklearn.utils._weight_vector'],
+             hiddenimports=['cython', 'sklearn', 'sklearn.ensemble', 'sklearn.neighbors._typedefs', 'sklearn.neighbors._quad_tree', 'sklearn.tree._utils', 'sklearn.utils._cython_blas','sklearn.preprocessing', 'sklearn.compose', 'cytoolz.compose', 'greenlet', 'sklearn.utils.sparsetools._graph_validation', 'sklearn.utils.sparsetools._graph_tools', 'scipy.special._ufuncs_cxx', 'sklearn.utils.lgamma', 'sklearn.utils.weight_vector', 'selenium', 'sklearn.utils._weight_vector', 'xgboost.core'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

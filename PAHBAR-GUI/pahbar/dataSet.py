@@ -2,12 +2,12 @@ from datetime import timedelta, date
 from copy import deepcopy
 from numpy.lib.function_base import copy
 from pahbar.loadData import LoadData
-from pahbar.featuresData import FeaturesData
+from pahbar.featuresData import STFeaturesData, MTFeaturesData
 from pahbar.dates import Dates
 
 class DataSet:
     def __init__ (self, featuresData, loadData):
-        self.featuresData = FeaturesData (featuresData)
+        self.featuresData = MTFeaturesData (featuresData)
         self.loadData = LoadData (loadData)
         self.__update_Headers__ ()   
         self.__update_Attributes__ ()
@@ -45,7 +45,6 @@ class DataSet:
     def __get_DataForDisplay__(self, fromDate, toDate, headers):
         dates = Dates.make_ListOfDates (fromDate, toDate, jalali = True)
         dates = self.__remove_InvalidDates__ (dates)
-        # data = DataSet.__prepare_DataToDisplay__ (data)
         return self.get_DataByDate (dates, headers)
 
     def __is_InvalidEditDate__ (self, data):

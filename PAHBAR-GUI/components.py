@@ -11,6 +11,7 @@ from eventhandler import Event
 import queue
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import timedelta
+from datetime import date
 
 class PlotCanvas (ttk.LabelFrame):
     def __init__ (self, parent):
@@ -103,7 +104,7 @@ class DataTree(ttk.Frame):
 
             tree.tag_configure('Error', background='#f3870c')
 class DatePicker(ttk.LabelFrame):
-    def __init__(self, parent, name, preDefinedDate = None):
+    def __init__(self, parent, name, preDefinedFromDate = None, preDefinedToDate = None):
         super().__init__(parent, text=name, padding="3 3 12 12")
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -125,9 +126,12 @@ class DatePicker(ttk.LabelFrame):
         self.yearLabel.grid(column=0, row=0, sticky=(tk.E,),padx=5, pady=5)
         year_combo = ttk.Combobox(self, textvariable=year_var)
         year_combo.grid(column=1, row=0, sticky=(tk.E,),padx=5, pady=5)
-        year_combo['values'] = tuple(range(1396, 1405))
-        if preDefinedDate:
-            year_var.set(preDefinedDate [0])
+        if preDefinedToDate:
+            year_combo['values'] = tuple(range(1396, preDefinedToDate.year + 1))
+        else:
+            year_combo['values'] = tuple(range(1396, 1405))
+        if preDefinedFromDate:
+            year_var.set(preDefinedFromDate [0])
         else:
             year_var.set (year_combo['values'][0])
         year_combo.state(["readonly"])
@@ -137,7 +141,10 @@ class DatePicker(ttk.LabelFrame):
         self.monthLabel.grid(column=0, row=1, sticky=(tk.E,),padx=5, pady=5)
         month_combo = ttk.Combobox(self, textvariable=month_var)
         month_combo.grid(column=1, row=1, sticky=(tk.E,),padx=5, pady=5)
-        month_combo['values'] = tuple(range(1, 13))
+        if preDefinedToDate and preDefinedFromDate:
+            month_combo['values'] = tuple(range(preDefinedFromDate [1], preDefinedToDate.month + 1))
+        else:
+            month_combo['values'] = tuple(range(1, 13))
         month_combo.state(["readonly"])
 
         self.dayLabel = ttk.Label(self, text='Day:', foreground = '#124d5d')
@@ -145,8 +152,8 @@ class DatePicker(ttk.LabelFrame):
         self.dayLabel.grid(column=0, row=2, sticky=(tk.E,),padx=5, pady=5)
         day_combo = ttk.Combobox(self, textvariable=day_var)
         day_combo.grid(column=1, row=2, sticky=(tk.E,),padx=5, pady=5)
-        if preDefinedDate:
-            day_var.set (preDefinedDate [2])
+        if preDefinedFromDate:
+            day_var.set (preDefinedFromDate [2])
         else:
             day_var.set (8)
         day_combo.state(["readonly"])
@@ -156,20 +163,28 @@ class DatePicker(ttk.LabelFrame):
             month = month_var.get()
             if 1 <= month <= 6:
                 day_combo['values'] = tuple(range(1,32)) # 31 day month
-            elif 7 <= month <= 11:
+            elif (
+                not 1 <= month <= 6
+                and 7 <= month <= 11
+                or not 1 <= month <= 6
+                and not 7 <= month <= 11
+                and year_var.get() % 4 == 3
+            ):
                 day_combo['values'] = tuple(range(1,31)) # 30 day month
             else:
-                if year_var.get() % 4 == 3: # kabise
-                    day_combo['values'] = tuple(range(1,31)) # 30 day month
-                else:
-                    day_combo['values'] = tuple(range(1,30)) # 29 day month
+                day_combo['values'] = tuple(range(1,30)) # 29 day month
             if str(day_var.get()) not in day_combo['values']:
                 day_var.set(day_combo['values'][0])
+            if (preDefinedFromDate and preDefinedToDate) and (preDefinedFromDate[1] == preDefinedToDate.month or name == 'To Date'):
+                day_combo ['values'] = tuple (list (filter(lambda x: int (x) <= preDefinedToDate.day, day_combo ['values'])))
+            if (preDefinedFromDate and preDefinedToDate) and (month == preDefinedToDate.month and preDefinedFromDate[1] != preDefinedToDate.month and name == 'From Date'):
+                day_combo ['values'] = tuple (list (filter(lambda x: int (x) <= preDefinedToDate.day, day_combo ['values'])))
+            
         
         month_var.trace('w', set_day_combo_values)
         year_var.trace('w', set_day_combo_values)
-        if preDefinedDate:
-            month_var.set (preDefinedDate [1])
+        if preDefinedFromDate:
+            month_var.set (preDefinedFromDate [1])
         else:
             month_var.set(month_combo['values'][0])
 
@@ -289,9 +304,6 @@ class DataIO(ttk.LabelFrame):
     
     def export_fun(self):
         files = [
-            # ('All Files', '*.*'),  
-            # ('Python Files', '*.py'), 
-            # ('Text Document', '*.txt'),
             ('Excel Files', '*.xlsx'),
         ]
         self.get_Mode ()
@@ -304,11 +316,7 @@ class DataIO(ttk.LabelFrame):
             if self.language == 2:
                 tkinter.messagebox.showinfo('عملیات موفق', 'دیتاست ذخیره شد!')
             os.startfile (file_path)
-        # else:
-        #     if self.language == 1:
-        #         tkinter.messagebox.showerror('Unsuccessful', 'Something went wrong!')
-        #     if self.language == 2:
-        #         tkinter.messagebox.showerror('ناموفق', 'متاسفانه مشکلی پیش آمده ... با پشتیبانی نرم‌افزار تماس بگیرید.')
+
     def get_Mode (self):
         self.mode = self.event_handler.get_Mode ()
         
@@ -491,30 +499,18 @@ class DataDisplayControl(ttk.Labelframe):
         self.columnconfigure(1, weight=1)
         self.rowconfigure(1, weight=1)
 
-        from_date_picker = DatePicker(self,'From Date', preDefinedDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day])
+        from_date_picker = DatePicker(self,'From Date', preDefinedFromDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day])
         self.from_date_picker = from_date_picker
-        to_date_picker = DatePicker(self, 'To Date', preDefinedDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day])
+        to_date_picker = DatePicker(self, 'To Date', preDefinedFromDate=[trainEndDate.year, trainEndDate.month, trainEndDate.day])
         self.to_date_picker = to_date_picker
-
-        # self.mode = tk.StringVar (value='DataSet.pickle')
-        # # checkButton = ttk.Checkbutton (self, text = 'Exclude DGs', command = self.checkButtonFunc)
-        # radioButton1 = ttk.Radiobutton(self, text='Complete DataSet', variable=self.mode, value='DataSet.pickle',command=self.select_DataSet)
-        # radioButton2 = ttk.Radiobutton(self, text='DGs Excluded', variable=self.mode, value='DataSet_ExcludingDG.pickle',command=self.select_DataSet)
 
         displayLogo = tk.PhotoImage (file='images/display.png')
         self.displayLogo = displayLogo
         self.displayButton = ttk.Button(self, text='Display Data', command=self.fun_wrapper, image = self.displayLogo, compound = 'left', style = 'my.TButton')
-
-        # deleteLogo = tk.PhotoImage (file = 'images/deleteLogo.png')
-        # self.deleteLogo = deleteLogo
-        # self.deleteButton = ttk.Button (self, text = 'Delete Data', command = self.delete_Row, image = self.deleteLogo, compound = 'left', style = 'my.TButton')
         
         from_date_picker.grid(column=0,row=0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
         to_date_picker.grid(column=1,row=0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
-        # radioButton1.grid (column=0,row=1, padx=10, pady=10, sticky='w')
-        # radioButton2.grid (column=0,row=2, padx=10, pady=10, sticky='w')
         self.displayButton.grid(column=0,row=1, padx=10, pady=10, sticky='w')
-        # self.deleteButton.grid (column = 1, row = 1, padx = 10, pady = 10, sticky = 'w')
 
     def change_Language (self, language):
         self.language = language
@@ -580,7 +576,7 @@ class DataDisplayControl(ttk.Labelframe):
                 if self.language == 2:
                     tkinter.messagebox.showerror('ناموفق', 'متاسفانه مشکلی پیش آمده است! در صورتی که از وجود بازه انتخاب شده در دیتاست اطمینان دارید، با پشتیبانی نرم‌افزار تماس بگیرید')
 
-class PredictionDisplayControl(ttk.Labelframe):
+class STPredictionDisplayControl(ttk.Labelframe):
     def __init__(self,parent, data_tree, event_handler, trainEndDate):
         super().__init__(parent,text='Prediction Display')
         self.data_tree = data_tree
@@ -595,9 +591,9 @@ class PredictionDisplayControl(ttk.Labelframe):
         self.rowconfigure(2, weight=1)
 
         newDate = trainEndDate + timedelta (days = 3)
-        from_date_picker = DatePicker(self,'From Date', preDefinedDate=[newDate.year, newDate.month, newDate.day])
+        from_date_picker = DatePicker(self,'From Date', preDefinedFromDate=[newDate.year, newDate.month, newDate.day], preDefinedToDate = newDate + timedelta (days=7))
         self.from_date_picker = from_date_picker
-        to_date_picker = DatePicker(self, 'To Date', preDefinedDate=[newDate.year, newDate.month, newDate.day])
+        to_date_picker = DatePicker(self, 'To Date', preDefinedFromDate=[newDate.year, newDate.month, newDate.day], preDefinedToDate = newDate + timedelta (days=7))
         self.to_date_picker = to_date_picker
 
         predictLogo = tk.PhotoImage (file='images/predict.png')
@@ -656,7 +652,7 @@ class PredictionDisplayControl(ttk.Labelframe):
         if response:
             inputVariables = self.get_period()
             inputVariables ['replace'] = replace
-            data_dict = self.event_handler.handle(Event.DISPLAY_PREDICTION_BUTTON, **inputVariables)
+            data_dict = self.event_handler.handle(Event.DISPLAY_ST_PREDICTION_BUTTON, **inputVariables)
             if data_dict:
                 if data_dict == 1:
                     if self.language == 1:
@@ -698,7 +694,133 @@ class PredictionDisplayControl(ttk.Labelframe):
         self.get_Mode ()
         file_path = tk.filedialog.asksaveasfilename (filetypes = files, defaultextension = files, initialfile = f'Prediction{self.mode [:-7]}_ from {fromDateShamsi} to {toDateShamsi}')
         file_path = Path(file_path)
-        success = self.event_handler.handle(Event.EXPORT_Prediction_BUTTON, **dates, file_path = file_path)
+        success = self.event_handler.handle(Event.EXPORT_Prediction_BUTTON, **dates, file_path = file_path, predictionMode = 'ST')
+        if success:
+            if self.language == 1:
+                tkinter.messagebox.showinfo('Successful', 'Prediction results exported successfully!')
+            if self.language == 2:
+                tkinter.messagebox.showinfo('عملیات موفق', 'نتایج پیش‌بینی ذخیره شد')
+            os.startfile (file_path)
+        else:
+            if self.language == 1:
+                tkinter.messagebox.showerror('Unsuccessful', 'Predicted load information is not available!')
+            if self.language == 2:
+                tkinter.messagebox.showerror('ناموفق', 'اطلاعات پیش‌بینی در دسترس نیست')
+
+    def get_Mode (self):
+        self.mode = self.event_handler.get_Mode ()
+
+class MTPredictionDisplayControl(ttk.Labelframe):
+    def __init__(self,parent, data_tree, event_handler, trainEndDate):
+        super().__init__(parent,text='Prediction Display')
+        self.data_tree = data_tree
+        self.event_handler = event_handler
+        self.language = 1
+        self.queue = queue.Queue()
+
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
+
+        newDate = trainEndDate + timedelta (days = 11)
+        from_date_picker = DatePicker(self,'From Date', preDefinedFromDate=[newDate.year, newDate.month, newDate.day])
+        self.from_date_picker = from_date_picker
+        to_date_picker = DatePicker(self, 'To Date', preDefinedFromDate=[newDate.year, newDate.month, newDate.day])
+        self.to_date_picker = to_date_picker
+
+        predictLogo = tk.PhotoImage (file='images/predict.png')
+        self.predictLogo = predictLogo
+        self.display_button = ttk.Button(self, text='Train & Predict', command=self.fun_wrapper, image = self.predictLogo, compound = 'left', style = 'my.TButton')
+
+        exportLogo = tk.PhotoImage (file='images/exportPrediction.png')
+        self.exportLogo = exportLogo
+        self.export_button = ttk.Button(self, text='Export Results', command=self.export_fun, image = self.exportLogo, compound = 'left', style = 'my.TButton')
+
+        from_date_picker.grid(column=0,row=0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
+        to_date_picker.grid(column=1,row=0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
+        self.display_button.grid(column=0,row=1, padx=10, pady=10, sticky='W')
+        self.export_button.grid(column=1,row=1, padx=10, pady=10, sticky='W')
+
+    def change_Language (self, language):
+        self.language = language
+        if language == 1:
+            self.change_ToEnglish ()
+        if language == 2:
+            self.change_ToFarsi ()
+
+    def change_ToEnglish (self):
+        self.config (text = 'Prediction Display')
+        self.from_date_picker.change_ToEnglish ()
+        self.to_date_picker.change_ToEnglish ()
+        self.display_button.config (text='Predict', style= 'my.TButton')
+        self.export_button.config (text= 'Export Results', style= 'my.TButton')
+        self.display_predictAndUpdatButton.config (text= 'Predict and Update DataSet', style= 'my.TButton')
+
+    def change_ToFarsi (self):
+        self.config (text = 'نمایش نتایج پیش‌بینی')
+        self.from_date_picker.change_ToFarsi ()
+        self.to_date_picker.change_ToFarsi ()
+        self.display_button.config (text = 'پیش‌بینی', style= 'farsi.TButton')
+        self.export_button.config (text= 'ذخیره نتایج', style= 'farsi.TButton')
+        self.display_predictAndUpdatButton.config (text= 'پیش‌بینی و به‌روزرسانی دیتاست', style= 'farsi.TButton')
+
+    def get_period(self):
+        return {
+            'from_date': self.from_date_picker.get_date(),
+            'to_date': self.to_date_picker.get_date()
+        }
+    def fun_wrapper(self):
+        predictDates = self.event_handler.determine_PredictDates (**self.get_period())
+        if self.language == 1:
+            response = tkinter.messagebox.askyesno (title="Predict Dates", message=f"Load will be predicted for the following dates ... If it is correct click yes, unless click No and complete your dataset!\nFrom {JalaliDate (predictDates [0])} to {JalaliDate (predictDates [-1])}\nIs it correct?")
+        if self.language == 2:
+            rightAligned = f"با توجه به آخرین تاریخ موجود در دیتاست، تاریخ‌های زیر پیش‌بینی خواهد شد ...\nاز تاریخ {JalaliDate(predictDates[0])} تا تاریخ {JalaliDate (predictDates [-1])}\nدر صورت صحت بازه انتخاب شده، بر روی گزینه Yes کلیک کنید!"
+            response = tkinter.messagebox.askyesno (title="تاریخ‌های پیش‌بینی", message= "{rightAligned:>}".format (rightAligned = rightAligned))
+        if response:
+            inputVariables = self.get_period()
+            self.event_handler.handle (Event.MTLF_TRAIN_BUTTON)
+            data_dict = self.event_handler.handle(Event.DISPLAY_MT_PREDICTION_BUTTON, **inputVariables)
+            if data_dict:
+                if data_dict == 1:
+                    if self.language == 1:
+                        tkinter.messagebox.showerror('Unsuccessful', 'Invalid date!')
+                    if self.language == 2:
+                        tkinter.messagebox.showerror('ناموفق', 'تاریخ انتخاب شده معتبر نیست')
+
+                if isinstance (data_dict, dict):
+                    if 'English' in data_dict:
+                        if self.language == 1:
+                            tkinter.messagebox.showerror('Unsuccessful', data_dict ['English'])
+                        if self.language == 2:
+                            tkinter.messagebox.showerror('ناموفق', data_dict ['Farsi'])
+                    else:
+                        if self.language == 1:
+                            tkinter.messagebox.showinfo('Successful', 'Load predicted successfully!') 
+                        if self.language == 2:
+                            tkinter.messagebox.showinfo('عملیات موفق', 'پیش‌بینی انجام شد') 
+                        self.data_tree.display_data(data_dict['header'], data_dict['data'])
+            else:
+                if self.language == 1:
+                    tkinter.messagebox.showerror('Unsuccessful', 'Somethiong went wrong!')
+                if self.language == 2:
+                    tkinter.messagebox.showerror('ناموفق', 'متاسفانه مشکلی پیش آمده است ... با پشتیبانی نرم‌افزار تماس بگیرید')
+
+    def export_fun(self):
+        files = [
+            # ('All Files', '*.*'),  
+            # ('Python Files', '*.py'), 
+            # ('Text Document', '*.txt'),
+            ('Excel Files', '*.xlsx'),
+        ]
+        dates = self.get_period()
+        fromDateShamsi = JalaliDate (dates ['from_date'])
+        toDateShamsi = JalaliDate (dates ['to_date'])
+        self.get_Mode ()
+        file_path = tk.filedialog.asksaveasfilename (filetypes = files, defaultextension = files, initialfile = f'Prediction{self.mode [:-7]}_ from {fromDateShamsi} to {toDateShamsi}')
+        file_path = Path(file_path)
+        success = self.event_handler.handle(Event.EXPORT_Prediction_BUTTON, **dates, file_path = file_path, predictionMode = 'MT')
         if success:
             if self.language == 1:
                 tkinter.messagebox.showinfo('Successful', 'Prediction results exported successfully!')
@@ -715,11 +837,12 @@ class PredictionDisplayControl(ttk.Labelframe):
         self.mode = self.event_handler.get_Mode ()
 
 class AnalysisDisplayControl(ttk.Labelframe):
-    def __init__(self,parent, data_tree, plotCanvas, event_handler, trainEndDate):
+    def __init__(self,parent, data_tree, plotCanvas, event_handler, trainEndDate, predictionMode):
         super().__init__(parent,text='Analysis Display')
         self.data_tree = data_tree
         self.plotCanvas = plotCanvas
         self.event_handler = event_handler
+        self.predictionMode = predictionMode
         self.language = 1
 
         self.columnconfigure(0, weight=1)
@@ -727,9 +850,9 @@ class AnalysisDisplayControl(ttk.Labelframe):
         self.columnconfigure(1, weight=1)
         self.rowconfigure(1, weight=1)
 
-        from_date_picker = DatePicker(self,'From Date', preDefinedDate= [trainEndDate.year, trainEndDate.month, trainEndDate.day])
+        from_date_picker = DatePicker(self,'From Date', preDefinedFromDate= [trainEndDate.year, trainEndDate.month, trainEndDate.day])
         self.from_date_picker = from_date_picker
-        to_date_picker = DatePicker(self, 'To Date', preDefinedDate = [trainEndDate.year, trainEndDate.month, trainEndDate.day])
+        to_date_picker = DatePicker(self, 'To Date', preDefinedFromDate = [trainEndDate.year, trainEndDate.month, trainEndDate.day])
         self.to_date_picker = to_date_picker
 
         analyzeLogo = tk.PhotoImage (file='images/analysisLogo.png')
@@ -787,7 +910,7 @@ class AnalysisDisplayControl(ttk.Labelframe):
         }
 
     def analyze_Prediction (self):
-        data_dict = self.event_handler.handle(Event.ANALYZE_PREDICTION,**self.get_period())
+        data_dict = self.event_handler.handle(Event.ANALYZE_PREDICTION,**self.get_period(), predictionMode = self.predictionMode)
         if data_dict:
             if isinstance (data_dict, dict):
                 if 'English' in data_dict:
@@ -906,11 +1029,12 @@ class DataNote(ttk.Frame):
         self.data_display_control.change_Language (language)
 
 class HistoryControl (ttk.LabelFrame):
-    def __init__ (self, parent, root, event_handler):
+    def __init__ (self, parent, root, event_handler, mode):
         super().__init__(parent, text='History', padding="3 3 3 3")
         self.event_handler = event_handler
         self.root = root
         self.language = 1
+        self.predictionMode = mode
 
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -948,7 +1072,10 @@ class HistoryControl (ttk.LabelFrame):
         self.get_Mode ()
         file_path = tk.filedialog.asksaveasfilename(filetypes = files, defaultextension = files, initialfile = f'PredictionHistory{self.mode [:-7]}')
         file_path = Path(file_path)
-        success = self.event_handler.handle(Event.EXPORT_HISTORY_BUTTON, file_path = file_path)
+        if self.predictionMode == 'ST':
+            success = self.event_handler.handle(Event.EXPORT_STLF_HISTORY_BUTTON, file_path = file_path)
+        else:
+            success = self.event_handler.handle(Event.EXPORT_MTLF_HISTORY_BUTTON, file_path = file_path)
         if success:
             if self.language == 1:
                 tkinter.messagebox.showinfo('Successful', 'Prediction history exported successfully!')
@@ -963,8 +1090,8 @@ class HistoryControl (ttk.LabelFrame):
 
     def get_Mode (self):
         self.mode = self.event_handler.get_Mode ()
-            
-class PredictControl(ttk.LabelFrame):
+
+class STLFPredictControl(ttk.LabelFrame):
     def __init__(self, parent, root, event_handler):
         super().__init__(parent, text='Prediction Engine', padding="3 3 3 3")
         self.event_handler = event_handler
@@ -978,7 +1105,7 @@ class PredictControl(ttk.LabelFrame):
 
         trainLogo = tk.PhotoImage (file='images/train.png')
         self.trainLogo = trainLogo
-        train_button = ttk.Button(self, text='Train', command=self.predict, image = self.trainLogo, compound = 'left', style = 'my.TButton')
+        train_button = ttk.Button(self, text='Train', command=self.train, image = self.trainLogo, compound = 'left', style = 'my.TButton')
         train_button.grid(column=0,row=0, columnspan=2, padx=10, pady=10, sticky='WE')
         self.train_button = train_button
         status_var = tk.StringVar()
@@ -989,6 +1116,20 @@ class PredictControl(ttk.LabelFrame):
         status_var.set('Not Working')
         tk.Label(self, textvariable=status_var).grid(column=1, row=1, sticky=(tk.W,),padx=0, pady=5)
         self.queue = queue.Queue()
+        
+    def process_queue(self):
+        try:
+            msg = self.queue.get(0)
+            self.train_button.state(['!disabled'])
+            self.status_var.set('Not Working')
+        except queue.Empty:
+            self.root.after(1000, self.process_queue)
+    
+    def train(self):
+        self.train_button.state(['disabled'])
+        self.status_var.set('Working ...')
+        self.event_handler.handle(Event.STLF_TRAIN_BUTTON ,queue =self.queue)
+        self.root.after(1000, self.process_queue)
 
     def change_Language (self, language):
         self.language = language
@@ -1006,22 +1147,8 @@ class PredictControl(ttk.LabelFrame):
         self.config (text='موتور پیش‌بینی')
         self.train_button.config (text='آموزش مدل', style = 'farsi.TButton')
         self.statusLabel.config (text='وضعیت: ', font = ('B Koodak Bold', 14, 'bold'))
-        
-    def process_queue(self):
-        try:
-            msg = self.queue.get(0)
-            self.train_button.state(['!disabled'])
-            self.status_var.set('Not Working')
-        except queue.Empty:
-            self.root.after(1000, self.process_queue)
-    
-    def predict(self):
-        self.train_button.state(['disabled'])
-        self.status_var.set('Working ...')
-        self.event_handler.handle(Event.TRAIN_BUTTON ,queue =self.queue)
-        self.root.after(1000, self.process_queue)
 
-class PredictionNote(ttk.Frame):
+class STLFPredictionNote(ttk.Frame):
     def __init__(self,parent, root, event_handler, trainEndDate):
         super().__init__(parent)
         self.columnconfigure(0, weight=1)
@@ -1036,11 +1163,11 @@ class PredictionNote(ttk.Frame):
         # data_selection_control.grid (column = 0, row = 0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
         data_tree = DataTree(self)
         data_tree.grid(column=0,row=2,columnspan=3,padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
-        self.prediction_display_control = PredictionDisplayControl(self, data_tree, self.event_handler, trainEndDate)
+        self.prediction_display_control = STPredictionDisplayControl(self, data_tree, self.event_handler, trainEndDate)
         self.prediction_display_control.grid(column=0,row=0, rowspan = 2, columnspan = 2, sticky=(tk.E,tk.W,tk.N,tk.S), padx=10, pady=10)
-        self.historyControl = HistoryControl (self, root, self.event_handler)
+        self.historyControl = HistoryControl (self, root, self.event_handler, mode = 'ST')
         self.historyControl.grid (column = 2, row = 0, sticky=(tk.E,tk.W,tk.N,tk.S), padx=10, pady=10)
-        self.prediction_control = PredictControl(self, root, self.event_handler)
+        self.prediction_control = STLFPredictControl(self, root, self.event_handler)
         self.prediction_control.grid(column=2,row=1, sticky=(tk.E,tk.W,tk.N,tk.S), padx=10, pady=10) 
 
     def change_Language (self, language):
@@ -1048,8 +1175,34 @@ class PredictionNote(ttk.Frame):
         self.historyControl.change_Language (language)
         self.prediction_control.change_Language (language)
 
-class AnalysisNote(ttk.Frame):
+
+class MTLFPredictionNote(ttk.Frame):
     def __init__(self,parent, root, event_handler, trainEndDate):
+        super().__init__(parent)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.rowconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
+        self.rowconfigure(2, weight=1)
+        self.event_handler = event_handler
+        
+        # data_selection_control = DataSetSelectionControl (self, event_handler)
+        # data_selection_control.grid (column = 0, row = 0, padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
+        data_tree = DataTree(self)
+        data_tree.grid(column=0,row=2,columnspan=3,padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
+        self.prediction_display_control = MTPredictionDisplayControl(self, data_tree, self.event_handler, trainEndDate)
+        self.prediction_display_control.grid(column=0,row=0, rowspan = 2, columnspan = 2, sticky=(tk.E,tk.W,tk.N,tk.S), padx=10, pady=10)
+        self.historyControl = HistoryControl (self, root, self.event_handler, mode = 'MT')
+        self.historyControl.grid (column = 2, row = 0, sticky=(tk.E,tk.W,tk.N,tk.S), padx=10, pady=10)
+
+    def change_Language (self, language):
+        self.prediction_display_control.change_Language (language)
+        self.historyControl.change_Language (language)
+        self.prediction_control.change_Language (language)
+
+class AnalysisNote(ttk.Frame):
+    def __init__(self,parent, root, event_handler, trainEndDate, predictionMode):
         super().__init__(parent)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -1065,7 +1218,7 @@ class AnalysisNote(ttk.Frame):
         data_tree.grid(column=0,row=2,columnspan=4,padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
         self.plotCanvas = PlotCanvas (self)
         self.plotCanvas.grid(column=1,row=0,rowspan = 2, columnspan=3,padx=10, pady=10,sticky=(tk.E,tk.W,tk.N,tk.S))
-        self.analysisDisplayControl = AnalysisDisplayControl(self, data_tree, self.plotCanvas, self.event_handler, trainEndDate)
+        self.analysisDisplayControl = AnalysisDisplayControl(self, data_tree, self.plotCanvas, self.event_handler, trainEndDate, predictionMode)
         self.analysisDisplayControl.grid (column=0,row=0, rowspan = 2, sticky=(tk.E,tk.W,tk.N,tk.S), padx=5, pady=5)
 
     def change_Language (self, language):
@@ -1081,21 +1234,25 @@ class MainNoteBook(ttk.Notebook):
         self.data_note.grid(sticky='ewns')
         self.add(self.data_note, text='Data')
 
-        self.predictionNote = PredictionNote(self, root, self.event_handler, trainEndDate)
-        self.predictionNote.grid(sticky=(tk.E,tk.W,tk.N,tk.S))
-        self.add(self.predictionNote, text='Prediction')
+        self.STLFPredictionNote = STLFPredictionNote(self, root, self.event_handler, trainEndDate)
+        self.STLFPredictionNote.grid(sticky=(tk.E,tk.W,tk.N,tk.S))
+        self.add(self.STLFPredictionNote, text='Short-Term Prediction')
 
-        # self.longTermPredictionNote = PredictionNote(self, root, self.event_handler, trainEndDate)
-        # self.longTermPredictionNote.grid(sticky=(tk.E,tk.W,tk.N,tk.S))
-        # self.add(self.longTermPredictionNote, text='Long-Term Prediction')
+        self.MTLFPredictionNote = MTLFPredictionNote(self, root, self.event_handler, trainEndDate)
+        self.MTLFPredictionNote.grid(sticky=(tk.E,tk.W,tk.N,tk.S))
+        self.add(self.MTLFPredictionNote, text='Mid-Term Prediction')  
 
-        self.analysisNote = AnalysisNote (self, root, self.event_handler, trainEndDate)
+        self.analysisNote = AnalysisNote (self, root, self.event_handler, trainEndDate, predictionMode='ST')
         self.analysisNote.grid (sticky=(tk.E,tk.W,tk.N,tk.S))
-        self.add (self.analysisNote, text='Analysis')
+        self.add (self.analysisNote, text='Short-Term Analysis')      
+
+        self.analysisNote = AnalysisNote (self, root, self.event_handler, trainEndDate, predictionMode='MT')
+        self.analysisNote.grid (sticky=(tk.E,tk.W,tk.N,tk.S))
+        self.add (self.analysisNote, text='Mid-Term Analysis')
 
     def change_Language (self, language):
         self.data_note.change_Language (language)
-        self.predictionNote.change_Language (language)
+        self.MTLFPredictionNote.change_Language (language)
         # self.longTermPredictionNote.change_Language (language)
         self.analysisNote.change_Language (language)
 

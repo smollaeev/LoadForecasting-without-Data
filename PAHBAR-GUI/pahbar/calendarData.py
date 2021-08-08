@@ -86,6 +86,8 @@ class CalendarData:
             return 2.0*hourAngle/15.0        
 
     def __get_ResponseFromShamsiAPI__(self):
+        # response = requests.get (f'https://farsicalendar.com/api/sh/{self.jalaliDay}/{self.jalaliMonth}',verify=False)
+        # jsonResponse = json.loads (response.text)
         for _ in range (5):
             try:
                 response = requests.get (f'https://farsicalendar.com/api/sh/{self.jalaliDay}/{self.jalaliMonth}',verify=False)
