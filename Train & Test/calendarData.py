@@ -48,9 +48,6 @@ class CalendarData:
                 if  temp2 == True:
                     return True
 
-        if (self.hijriDate.month == 10) and (self.hijriDate.day == 2):
-            return True
-
         return False
 
     def is_EideMazhabi (self):

@@ -6,10 +6,10 @@ import numpy as np
 
 class IndependentVariables ():
     def __init__ (self, data):
-        self.data = data [:, 1:] 
+        self.data = data  
 
     def encode_OneHot_FitTransform (self):
-        self.ct_WeekDays = ColumnTransformer ([('one_hot_encoder', OneHotEncoder(), [8])], remainder='passthrough')
+        self.ct_WeekDays = ColumnTransformer ([('one_hot_encoder', OneHotEncoder(), [9])], remainder='passthrough')
         self.data = np.array (self.ct_WeekDays.fit_transform (self.data), dtype= 'float64')
         self.data = self.data [:, 1:]
 
